@@ -1,0 +1,84 @@
+# --------------------------------------------
+# Secrets and local environment files
+# --------------------------------------------
+.env
+.env.*
+!.env.example
+api/.env
+api/.env.*
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+backend/.env.*
+
+# --------------------------------------------
+# Python (backend)
+# --------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --------------------------------------------
+# Java / Spring Boot (api)
+# --------------------------------------------
+api/target/
+api/build/
+*.class
+*.jar
+*.war
+*.ear
+
+# --------------------------------------------
+# Node / frontend
+# --------------------------------------------
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+*.tsbuildinfo
+
+# --------------------------------------------
+# Logs and runtime files
+# --------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.pid
+*.seed
+*.stackdump
+
+# --------------------------------------------
+# Data artifacts / generated datasets
+# --------------------------------------------
+backend/data/reddit/raw/
+backend/data/reddit/processed/
+
+# --------------------------------------------
+# IDE and OS files
+# --------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?
+
+# --------------------------------------------
+# Misc local folders
+# --------------------------------------------
+.docs
