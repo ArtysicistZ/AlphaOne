@@ -14,7 +14,7 @@ app = Celery(
 app.conf.beat_schedule = {
     "run_batch_periodically": {
         "task": "app.celery_app.run_batch",
-        "schedule": timedelta(minutes=1),
+        "schedule": timedelta(minutes=120),
     },
 }
 app.conf.timezone = "UTC"

@@ -16,7 +16,7 @@
 
 ## Features
 - End-to-end data flow: ingest -> process -> persist -> serve -> visualize.
-- Hourly/periodic asynchronous processing with Celery + Redis beat/worker.
+- Periodic asynchronous processing with Celery + Redis beat/worker.
 - Idempotent raw ingestion using `source_id` upsert semantics.
 - Sentence-level sentiment scoring (FinBERT) with topic tagging.
 - Read API for tracked assets, evidence feeds, daily sentiment, topic summary, and word cloud.
