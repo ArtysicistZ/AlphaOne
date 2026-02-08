@@ -1,205 +1,341 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import WordCloud from 'react-d3-cloud';
-import { 
-  getWordCloudData, 
-  getTopicSummary, 
+import Sidebar from '../components/Sidebar';
+import SentimentChart from '../components/SentimentChart';
+import EvidenceList from '../components/EvidenceList';
+import {
+  getWordCloudData,
+  getTopicSummary,
   getSentimentEvidence,
-  getTrackedAssets
+  getTrackedAssets,
+  getSentimentForTickerChart,
 } from '../api/sentimentApi';
 
-// --- (Your SummaryWidget and TickerSearchResult components are unchanged) ---
-function SummaryWidget({ title, score }) {
-  const scoreColor = score > 0 ? 'green' : score < 0 ? 'red' : 'gray';
-  const scoreText = score.toFixed(4);
+const getScore = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatScore = (score) => {
+  const parsed = getScore(score);
+  return parsed > 0 ? `+${parsed.toFixed(3)}` : parsed.toFixed(3);
+};
+
+const scoreToneClass = (score) => {
+  const parsed = getScore(score);
+  if (parsed > 0.05) return 'is-positive';
+  if (parsed < -0.05) return 'is-negative';
+  return 'is-neutral';
+};
+
+function SummaryCard({ title, score, subtitle }) {
   return (
-    <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', minWidth: '200px', textAlign: 'center' }}>
-      <h3 style={{ margin: 0, color: '#555' }}>{title}</h3>
-      <h2 style={{ color: scoreColor, margin: '10px 0 0 0' }}>{scoreText}</h2>
-    </div>
+    <article className={`summary-card panel ${scoreToneClass(score)}`}>
+      <p className="summary-label">{title}</p>
+      <p className="summary-score">{formatScore(score)}</p>
+      <p className="summary-subtitle">{subtitle}</p>
+    </article>
   );
 }
-function TickerSearchResult({ ticker, evidence, summary }) {
-  if (!ticker || !summary) return null;
-  const scoreColor = summary.averageScore > 0 ? 'green' : summary.averageScore < 0 ? 'red' : 'gray';
-  return (
-    <div style={{ 
-        marginTop: '20px', 
-        padding: '15px', 
-        border: '1px solid #eee',
-        maxWidth: '650px',  // Sets a max width for this box
-        margin: '0 auto'    // Re-centers the box within the page
-    }}>
-      <h3>Results for: {ticker}</h3>
-      <p style={{fontSize: '1.2rem', fontWeight: 'bold'}}>
-        Today's Average Score: 
-        <span style={{ color: scoreColor, marginLeft: '10px' }}>
-          {(summary.averageScore ?? 0).toFixed(4)}
-        </span>
-      </p>
-      <h4>Sample Sentences (Evidence):</h4>
-      <ul style={{ listStyle: 'none', padding: 0, textAlign: 'left' }}>
-        {evidence.map((item) => (
-          <li key={item.id} style={{ borderBottom: '1px solid #ddd', padding: '10px 0' }}>
-            <strong style={{ color: (item.sentimentLabel ?? '') === 'positive' ? 'green' : item.sentimentLabel === 'negative' ? 'red' : 'gray', marginRight: '10px' }}>
-              [{(item.sentimentLabel ?? 'neutral').toUpperCase()}]
-            </strong> 
-            {item.relevantText}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-// --- (End of unchanged components) ---
 
-
-// This is your main page component
 function SentimentSummaryPage() {
-  // State for your page sections
+  const [assets, setAssets] = useState([]);
+  const [selectedAsset, setSelectedAsset] = useState('');
+  const [searchTicker, setSearchTicker] = useState('');
+
   const [macroScore, setMacroScore] = useState(0);
   const [techScore, setTechScore] = useState(0);
+  const [assetScore, setAssetScore] = useState(0);
+
   const [wordCloudData, setWordCloudData] = useState([]);
-  const [allTopics, setAllTopics] = useState([]); // <-- MODIFIED: New state for dropdown
+  const [chartData, setChartData] = useState([]);
+  const [evidence, setEvidence] = useState([]);
 
-  // State for your ticker search
-  const [searchTicker, setSearchTicker] = useState('');
-  const [searchedTicker, setSearchedTicker] = useState(null);
-  const [searchSummary, setSearchSummary] = useState(null);
-  const [searchEvidence, setSearchEvidence] = useState([]);
+  const [cloudWidth, setCloudWidth] = useState(540);
+  const [isBootLoading, setIsBootLoading] = useState(true);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [bootError, setBootError] = useState('');
+  const [detailError, setDetailError] = useState('');
 
-  // Fetch summary data when the page loads
   useEffect(() => {
-    // 1. Fetch general topics
-    getTopicSummary('MACRO').then(data => setMacroScore(data.averageScore)).catch(err => console.error("Could not fetch MACRO", err));
-    getTopicSummary('TECHNOLOGY').then(data => setTechScore(data.averageScore)).catch(err => console.error("Could not fetch TECHNOLOGY", err));
+    const updateCloudWidth = () => {
+      if (window.innerWidth < 640) {
+        setCloudWidth(300);
+      } else if (window.innerWidth < 900) {
+        setCloudWidth(420);
+      } else {
+        setCloudWidth(540);
+      }
+    };
 
-    // 2. Fetch word cloud data
-    getWordCloudData().then(data => {setWordCloudData(data);}).catch(err => console.error("Could not fetch Word Cloud", err));
-    
-    // 3. <-- MODIFIED: Fetch all topics for the datalist
-    getTrackedAssets().then(data => {setAllTopics(data);}).catch(err => console.error("Could not fetch assets", err));
-    
-  }, []); // The empty [] means this runs once on page load
+    updateCloudWidth();
+    window.addEventListener('resize', updateCloudWidth);
+    return () => window.removeEventListener('resize', updateCloudWidth);
+  }, []);
 
-  // ... (handleTickerSearch function is unchanged) ...
-  const handleTickerSearch = async (e) => {
-    e.preventDefault(); 
-    if (!searchTicker) return; 
-    try {
-      setSearchedTicker(searchTicker);
-      setSearchSummary(null);
-      setSearchEvidence([]);
-      const summaryData = await getTopicSummary(searchTicker);
-      const evidenceData = await getSentimentEvidence(searchTicker);
-      setSearchSummary(summaryData);
-      setSearchEvidence(evidenceData);
-    } catch (error) {
-      console.error("Error searching for ticker:", error);
-      alert("Could not find data for that ticker. (Check your topic_tagger.py)");
-    }
+  useEffect(() => {
+    let isActive = true;
+
+    const loadBootstrap = async () => {
+      setIsBootLoading(true);
+      setBootError('');
+
+      const [assetRes, macroRes, techRes, cloudRes] = await Promise.allSettled([
+        getTrackedAssets(),
+        getTopicSummary('MACRO'),
+        getTopicSummary('TECHNOLOGY'),
+        getWordCloudData(),
+      ]);
+
+      if (!isActive) return;
+
+      const nextAssets = assetRes.status === 'fulfilled' && Array.isArray(assetRes.value) ? assetRes.value : [];
+      setAssets(nextAssets);
+
+      if (macroRes.status === 'fulfilled') {
+        setMacroScore(getScore(macroRes.value?.averageScore));
+      }
+
+      if (techRes.status === 'fulfilled') {
+        setTechScore(getScore(techRes.value?.averageScore));
+      }
+
+      if (cloudRes.status === 'fulfilled' && Array.isArray(cloudRes.value)) {
+        setWordCloudData(cloudRes.value);
+      }
+
+      if (nextAssets.length > 0) {
+        const firstAsset = nextAssets[0].slug;
+        setSelectedAsset(firstAsset);
+        setSearchTicker(firstAsset);
+      }
+
+      if (
+        assetRes.status === 'rejected' ||
+        macroRes.status === 'rejected' ||
+        techRes.status === 'rejected' ||
+        cloudRes.status === 'rejected'
+      ) {
+        setBootError('Some global metrics are temporarily unavailable.');
+      }
+
+      setIsBootLoading(false);
+    };
+
+    loadBootstrap().catch((error) => {
+      console.error('Bootstrap error:', error);
+      if (isActive) {
+        setBootError('Unable to load dashboard overview.');
+        setIsBootLoading(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAsset) return;
+
+    let isActive = true;
+
+    const loadAssetDetails = async () => {
+      setIsDetailLoading(true);
+      setDetailError('');
+
+      const [chartRes, evidenceRes, summaryRes] = await Promise.allSettled([
+        getSentimentForTickerChart(selectedAsset),
+        getSentimentEvidence(selectedAsset),
+        getTopicSummary(selectedAsset),
+      ]);
+
+      if (!isActive) return;
+
+      if (chartRes.status === 'fulfilled' && Array.isArray(chartRes.value)) {
+        setChartData(chartRes.value);
+      } else {
+        setChartData([]);
+      }
+
+      if (evidenceRes.status === 'fulfilled' && Array.isArray(evidenceRes.value)) {
+        setEvidence(evidenceRes.value);
+      } else {
+        setEvidence([]);
+      }
+
+      if (summaryRes.status === 'fulfilled') {
+        setAssetScore(getScore(summaryRes.value?.averageScore));
+      } else {
+        setAssetScore(0);
+      }
+
+      if (chartRes.status === 'rejected' || evidenceRes.status === 'rejected' || summaryRes.status === 'rejected') {
+        setDetailError(`Some details for ${selectedAsset} could not be loaded.`);
+      }
+
+      setIsDetailLoading(false);
+    };
+
+    loadAssetDetails().catch((error) => {
+      console.error('Asset details error:', error);
+      if (isActive) {
+        setChartData([]);
+        setEvidence([]);
+        setDetailError(`Unable to load sentiment details for ${selectedAsset}.`);
+        setIsDetailLoading(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedAsset]);
+
+  const handleTickerSearch = (event) => {
+    event.preventDefault();
+    const normalized = searchTicker.trim().toUpperCase();
+    if (!normalized) return;
+    setSelectedAsset(normalized);
+    setSearchTicker(normalized);
   };
-  
-  // ... (wordCloudFontSize logic is unchanged) ...
-  const minFontSize = 14;
-  const maxFontSize = 100;
+
+  const handleAssetSelect = (assetSlug) => {
+    setSelectedAsset(assetSlug);
+    setSearchTicker(assetSlug);
+  };
+
   const [minFreq, maxFreq] = useMemo(() => {
-    if (!wordCloudData || wordCloudData.length === 0) {
+    if (wordCloudData.length === 0) {
       return [0, 0];
     }
-    const values = wordCloudData.map(w => w.value);
+
+    const values = wordCloudData.map((word) => Number(word.value));
     return [Math.min(...values), Math.max(...values)];
   }, [wordCloudData]);
+
   const wordCloudFontSize = (word) => {
+    const value = Number(word.value);
     if (maxFreq === minFreq) {
-      return (minFontSize + maxFontSize) / 2;
+      return 36;
     }
-    const normalizedValue = (word.value - minFreq) / (maxFreq - minFreq);
-    return normalizedValue * (maxFontSize - minFontSize) + minFontSize;
+
+    const normalized = (value - minFreq) / (maxFreq - minFreq);
+    return normalized * 56 + 16;
   };
-  // ... (End of unchanged logic) ...
 
-  // --- NEW RENDER STRUCTURE ---
   return (
-    <div>
-      {/* --- 1. FULL-WIDTH "COVER" SECTION --- */}
-      <div style={{
-        width: '100%',
-        backgroundColor: '#1a202c', // Dark background
-        color: 'white',
-        padding: '1.5rem 0', // Padding top/bottom, 0 left/right
-        textAlign: 'center'
-      }}>
-        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Today's Keywords</h3>
-        
-        {/* This div centers the word cloud and handles scrolling */}
-        <div style={{ maxWidth: '650px', margin: '1rem auto 0 auto', overflowX: 'auto' }}>
-          {wordCloudData.length > 0 ? (
-            <WordCloud
-              data={wordCloudData}
-              width={650}
-              height={300}
-              font="Arial"
-              fontSize={wordCloudFontSize}
-              spiral="archimedean" // <-- This makes it dense in the center
-              rotate={0}
-              padding={1}
-            />
-          ) : (
-            <p>Loading word cloud...</p>
-          )}
-        </div>
-      </div>
+    <div className="sentiment-page">
+      <div className="page-wrap">
+        <section className="sentiment-header panel">
+          <div>
+            <p className="sentiment-kicker">Live Analytics</p>
+            <h1 className="sentiment-title">Sentiment Command Center</h1>
+            <p className="sentiment-subtitle">
+              Track market mood shifts with trend lines, keyword pressure, and sentence-level evidence.
+            </p>
+          </div>
 
-      {/* --- 2. CENTERED CONTENT SECTION --- */}
-      {/* This div wraps all your other content and centers it */}
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '1.5rem',
-        textAlign: 'center'
-      }}>
-
-        {/* --- Summary Widgets --- */}
-        <h2>Sentiment Summary</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
-          <SummaryWidget title="Macro Sentiment" score={macroScore} />
-          <SummaryWidget title="Technology Sentiment" score={techScore} />
-        </div>
-
-        {/* --- Ticker Search Section --- */}
-        <div style={{ marginTop: '30px' }}>
-          <h3>Get Detailed Ticker Sentiment</h3>
-          <form onSubmit={handleTickerSearch}>
-            
-            {/* --- MODIFIED: Added the 'list' prop to the input --- */}
-            <input 
-              type="text" 
-              placeholder="Enter ticker (e.g., NVDA)" 
+          <form onSubmit={handleTickerSearch} className="ticker-form">
+            <input
+              className="text-input"
+              type="text"
+              placeholder="Enter ticker (e.g. NVDA)"
               value={searchTicker}
-              onChange={(e) => setSearchTicker(e.target.value.toUpperCase())}
-              style={{ padding: '10px', fontSize: '1rem', minWidth: '250px' }}
-              list="topics-list" // <-- Links to the datalist below
+              onChange={(event) => setSearchTicker(event.target.value.toUpperCase())}
+              list="tracked-assets"
             />
-            
-            {/* --- MODIFIED: Added the datalist element --- */}
-            <datalist id="topics-list">
-              {allTopics.map((topic) => (
-                <option key={topic.id} value={topic.slug} />
+            <datalist id="tracked-assets">
+              {assets.map((asset) => (
+                <option key={asset.id} value={asset.slug} />
               ))}
             </datalist>
-
-            <button type="submit" style={{ padding: '10px', fontSize: '1rem', marginLeft: '10px' }}>
-              Search
+            <button type="submit" className="btn-action">
+              Load Asset
             </button>
           </form>
-          
-          <TickerSearchResult 
-            ticker={searchedTicker} 
-            summary={searchSummary}
-            evidence={searchEvidence} 
-          />
-        </div>
-        
+        </section>
+
+        {bootError ? <p className="inline-alert">{bootError}</p> : null}
+
+        <section className="summary-grid">
+          <SummaryCard title="Selected Asset" score={assetScore} subtitle={selectedAsset || 'No asset selected'} />
+          <SummaryCard title="Macro Sentiment" score={macroScore} subtitle="Cross-market narrative pressure" />
+          <SummaryCard title="Technology Sentiment" score={techScore} subtitle="Sector-wide signal direction" />
+        </section>
+
+        {isBootLoading ? (
+          <div className="loading-card panel">Loading dashboard data...</div>
+        ) : (
+          <section className="sentiment-main">
+            <Sidebar assets={assets} onSelectAsset={handleAssetSelect} selectedAsset={selectedAsset} />
+
+            <div className="sentiment-content">
+              <article className="chart-panel panel">
+                <div className="panel-head">
+                  <div>
+                    <h2>Trend Overview</h2>
+                    <p>Recent daily sentiment averages for {selectedAsset || 'your selected asset'}.</p>
+                  </div>
+                  <span className={`tone-pill ${scoreToneClass(assetScore)}`}>{formatScore(assetScore)}</span>
+                </div>
+
+                <div className="chart-shell">
+                  {isDetailLoading ? (
+                    <p className="loading-note">Refreshing sentiment trend...</p>
+                  ) : (
+                    <SentimentChart data={chartData} ticker={selectedAsset} />
+                  )}
+                </div>
+              </article>
+
+              {detailError ? <p className="inline-alert">{detailError}</p> : null}
+
+              <div className="sentiment-lower">
+                <article className="word-cloud-panel panel">
+                  <div className="panel-head">
+                    <div>
+                      <h2>Keyword Pressure</h2>
+                      <p>Most repeated words from today's sentiment stream.</p>
+                    </div>
+                  </div>
+
+                  <div className="word-cloud-shell">
+                    {wordCloudData.length > 0 ? (
+                      <WordCloud
+                        data={wordCloudData}
+                        width={cloudWidth}
+                        height={280}
+                        font="Space Grotesk"
+                        fontSize={wordCloudFontSize}
+                        rotate={0}
+                        spiral="archimedean"
+                        padding={2}
+                      />
+                    ) : (
+                      <p className="loading-note">No keyword cloud data available.</p>
+                    )}
+                  </div>
+                </article>
+
+                <article className="evidence-panel panel">
+                  <div className="panel-head">
+                    <div>
+                      <h2>Evidence Feed</h2>
+                      <p>Sentence-level mentions used for model scoring.</p>
+                    </div>
+                  </div>
+
+                  {isDetailLoading ? (
+                    <p className="loading-note">Loading evidence feed...</p>
+                  ) : (
+                    <EvidenceList evidence={evidence} />
+                  )}
+                </article>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

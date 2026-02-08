@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import SentimentSummaryPage from './pages/SentimentSummaryPage';
+import DashboardPage from './pages/DashboardPage';
+import ArchitecturePage from './pages/ArchitecturePage';
 
 // (You can also delete App.css, as we aren't using its styles anymore)
 
@@ -22,11 +24,8 @@ function App() {
           It renders <SentimentSummaryPage /> at the "/sentiment-summary" URL.
         */}
         <Route path="sentiment-summary" element={<SentimentSummaryPage />} />
-
-        {/* Example of future placeholder routes
-          <Route path="factor-analysis" element={<div>Factor Analysis Page</div>} />
-          <Route path="portfolio-optimization" element={<div>Portfolio Page</div>} /> 
-        */}
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="architecture" element={<ArchitecturePage />} />
       </Route>
     </Routes>
   );

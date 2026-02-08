@@ -1,45 +1,63 @@
 import React from 'react';
 
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return 'Unknown time';
+
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Unknown time';
+  }
+
+  return parsed.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatScore = (score) => {
+  if (typeof score !== 'number' || Number.isNaN(score)) {
+    return 'N/A';
+  }
+
+  return score > 0 ? `+${score.toFixed(3)}` : score.toFixed(3);
+};
+
+const toneClass = (sentiment) => {
+  if (sentiment === 'POSITIVE') return 'is-positive';
+  if (sentiment === 'NEGATIVE') return 'is-negative';
+  return 'is-neutral';
+};
+
 const EvidenceList = ({ evidence }) => {
-    if (!evidence || evidence.length === 0) {
+  const rows = Array.isArray(evidence) ? evidence : [];
+
+  if (rows.length === 0) {
+    return <p className="empty-state">No evidence available for this asset yet.</p>;
+  }
+
+  return (
+    <ul className="evidence-list">
+      {rows.map((item, index) => {
+        const sentiment = (item.sentimentLabel ?? item.sentiment ?? 'NEUTRAL').toUpperCase();
+        const text = item.relevantText ?? item.text ?? 'No text available.';
+        const score = Number(item.sentimentScore);
+        const key = item.id ?? `${sentiment}-${index}`;
+
         return (
-            <div className="p-8 text-center text-sm text-gray-400">
-                Waiting for incoming signals...
+          <li key={key} className="evidence-item">
+            <div className="evidence-meta">
+              <span className={`evidence-badge ${toneClass(sentiment)}`}>{sentiment}</span>
+              <span className="evidence-score">{formatScore(score)}</span>
             </div>
+            <p className="evidence-text">{text}</p>
+            <div className="evidence-time">{formatTimestamp(item.createdAt ?? item.timestamp)}</div>
+          </li>
         );
-    }
-
-    return (
-        <div className="divide-y divide-gray-100">
-            {evidence.map((item, index) => {
-                const isPositive = item.sentiment === 'POSITIVE';
-
-                return (
-                    <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                }`}>
-                                {item.sentiment}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                                {item.source || 'Reddit'}
-                            </span>
-                        </div>
-
-                        <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                            {item.text}
-                        </p>
-
-                        <div className="text-right">
-                            <span className="text-[10px] text-gray-400 font-medium">
-                                {item.timestamp || 'Just now'}
-                            </span>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
+      })}
+    </ul>
+  );
 };
 
 export default EvidenceList;

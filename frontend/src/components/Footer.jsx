@@ -1,24 +1,16 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 function Footer() {
-  // This footer will be at the bottom of all your pages
   return (
-    <footer style={{ padding: '20px', textAlign: 'center', opacity: 0.7 }}>
-
-      <p>alphaone © 2025</p>
-
-      {/* This is the HTML code from your DNS provider, adapted for React.
-        - "target" opens the link in a new tab.
-        - "rel" is for security.
-      */}
-      <a href="http://dnsexit.com" target="_blank" rel="noopener noreferrer">
-        <img 
-          src="http://dnsexit.com/images/dns.gif" 
-          style={{ border: 0 }} 
-          alt="DNS Powered by DNSEXIT.COM" 
-        />
-      </a>
-
+    <footer className="site-footer">
+      <div className="site-footer-inner page-wrap">
+        <span>AlphaOne (c) 2026. Live market sentiment intelligence.</span>
+        <div className="footer-links">
+          <Link to="/">Home</Link>
+          <Link to="/sentiment-summary">Sentiment Dashboard</Link>
+        </div>
+      </div>
     </footer>
   );
 }

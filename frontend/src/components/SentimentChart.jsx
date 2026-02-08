@@ -1,89 +1,104 @@
 import React from 'react';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 const SentimentChart = ({ data, ticker }) => {
-    if (!data || data.length === 0) {
-        return (
-            <div className="h-full w-full flex items-center justify-center text-sm text-gray-400">
-                No chart data available for {ticker}
-            </div>
-        );
-    }
+  const points = Array.isArray(data) ? data : [];
 
-    const chartData = {
-        labels: data.map(d => d.date),
-        datasets: [
-            {
-                label: 'Sentiment Score',
-                data: data.map(d => d.score),
-                fill: true,
-                backgroundColor: 'rgba(79, 70, 229, 0.1)', // Indigo fill
-                borderColor: '#4f46e5', // Indigo line
-                borderWidth: 2,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#4f46e5',
-                pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 2,
-            },
-        ],
-    };
+  if (points.length === 0) {
+    return <p className="empty-state">No trend data available for {ticker}.</p>;
+  }
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false,
-            },
-            tooltip: {
-                mode: 'index',
-                intersect: false,
-                backgroundColor: '#fff',
-                titleColor: '#111827',
-                bodyColor: '#4b5563',
-                borderColor: '#e5e7eb',
-                borderWidth: 1,
-                padding: 10,
-                displayColors: false,
-            },
-        },
-        scales: {
-            x: {
-                grid: {
-                    display: false,
-                },
-                ticks: {
-                    color: '#9ca3af',
-                    font: { size: 10 },
-                    maxTicksLimit: 6,
-                },
-            },
-            y: {
-                grid: {
-                    color: '#f3f4f6',
-                    borderDash: [5, 5],
-                },
-                ticks: {
-                    color: '#9ca3af',
-                    font: { size: 10 },
-                },
-                suggestedMin: -1,
-                suggestedMax: 1,
-            },
-        },
-        interaction: {
-            mode: 'nearest',
-            axis: 'x',
-            intersect: false,
-        },
-    };
+  const scoreSeries = points.map((item) => Number(item.averageScore ?? item.score ?? 0));
+  const averageScore = scoreSeries.reduce((sum, value) => sum + value, 0) / scoreSeries.length;
+  const lineColor = averageScore >= 0 ? '#0f9d76' : '#d54f45';
+  const fillColor = averageScore >= 0 ? 'rgba(15, 157, 118, 0.18)' : 'rgba(213, 79, 69, 0.15)';
 
-    return <Line data={chartData} options={options} />;
+  const chartData = {
+    labels: points.map((item) => item.date ?? item.day ?? ''),
+    datasets: [
+      {
+        label: 'Average Sentiment',
+        data: scoreSeries,
+        fill: true,
+        backgroundColor: fillColor,
+        borderColor: lineColor,
+        borderWidth: 2.5,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        pointHoverBorderWidth: 2,
+        pointHoverBackgroundColor: lineColor,
+        pointHoverBorderColor: '#ffffff',
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: '#ffffff',
+        titleColor: '#102032',
+        bodyColor: '#2f4458',
+        borderColor: '#d4e1eb',
+        borderWidth: 1,
+        padding: 10,
+        callbacks: {
+          label: (context) => `Score: ${Number(context.raw).toFixed(3)}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#667b8d',
+          maxTicksLimit: 7,
+          font: {
+            size: 11,
+          },
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        min: -1,
+        max: 1,
+        ticks: {
+          color: '#667b8d',
+          font: {
+            size: 11,
+          },
+          callback: (value) => Number(value).toFixed(1),
+        },
+        grid: {
+          color: 'rgba(212, 225, 235, 0.8)',
+        },
+      },
+    },
+  };
+
+  return <Line data={chartData} options={options} />;
 };
 
 export default SentimentChart;
