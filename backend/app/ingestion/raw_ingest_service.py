@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import case, func, text
@@ -6,10 +7,13 @@ from sqlalchemy import case, func, text
 from app.database.session import SessionLocal
 from app.database.models import RawRedditPost
 
+logger = logging.getLogger(__name__)
+
 
 def upsert_raw_posts(rows: list[dict]) -> int:
     db = SessionLocal()
     touched = 0
+    logger.info("raw_upsert_started rows=%s", len(rows))
     try:
         for row in rows:
             stmt = insert(RawRedditPost).values(
@@ -51,13 +55,19 @@ def upsert_raw_posts(rows: list[dict]) -> int:
             db.execute(stmt)
             touched += 1
         db.commit()
+        logger.info("raw_upsert_completed touched=%s", touched)
         return touched
+    except Exception:
+        db.rollback()
+        logger.exception("raw_upsert_failed touched=%s", touched)
+        raise
     finally:
         db.close()
 
 
 def claim_new_raw_posts(limit: int = 100) -> list[dict]:
     db = SessionLocal()
+    logger.debug("raw_claim_started limit=%s", limit)
     try:
         sql = text(
             """
@@ -80,7 +90,13 @@ def claim_new_raw_posts(limit: int = 100) -> list[dict]:
         )
         rows = db.execute(sql, {"limit": limit}).mappings().all()
         db.commit()
-        return [dict(r) for r in rows]
+        claimed = [dict(r) for r in rows]
+        logger.info("raw_claim_completed limit=%s claimed=%s", limit, len(claimed))
+        return claimed
+    except Exception:
+        db.rollback()
+        logger.exception("raw_claim_failed limit=%s", limit)
+        raise
     finally:
         db.close()
 
@@ -88,8 +104,17 @@ def claim_new_raw_posts(limit: int = 100) -> list[dict]:
 def mark_processed(raw_id: int) -> None:
     db = SessionLocal()
     try:
-        db.query(RawRedditPost).filter(RawRedditPost.id == raw_id).update({"status": "processed"})
+        updated = (
+            db.query(RawRedditPost)
+            .filter(RawRedditPost.id == raw_id)
+            .update({"status": "processed"})
+        )
         db.commit()
+        logger.debug("raw_mark_processed raw_id=%s updated=%s", raw_id, updated)
+    except Exception:
+        db.rollback()
+        logger.exception("raw_mark_processed_failed raw_id=%s", raw_id)
+        raise
     finally:
         db.close()
 
@@ -97,10 +122,12 @@ def mark_processed(raw_id: int) -> None:
 def mark_failed(raw_id: int) -> None:
     db = SessionLocal()
     try:
-        db.query(RawRedditPost).filter(RawRedditPost.id == raw_id).update({"status": "failed"})
+        updated = db.query(RawRedditPost).filter(RawRedditPost.id == raw_id).update({"status": "failed"})
         db.commit()
+        logger.debug("raw_mark_failed raw_id=%s updated=%s", raw_id, updated)
+    except Exception:
+        db.rollback()
+        logger.exception("raw_mark_failed_failed raw_id=%s", raw_id)
+        raise
     finally:
         db.close()
-
-
-

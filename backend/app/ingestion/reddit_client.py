@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
 from typing import List, Dict, Optional
 
 import praw
 
 from app.settings import CLIENT_ID, SECRET_KEY, USERNAME, PASSWORD
+
+logger = logging.getLogger(__name__)
 
 
 class RedditClient:
@@ -88,26 +91,48 @@ class RedditClient:
         include_comments: bool = True,
         include_submissions: bool = True,
     ) -> List[Dict]:
+        logger.info(
+            "reddit_fetch_started subreddits=%s limit=%s include_comments=%s include_submissions=%s",
+            len(subreddits),
+            limit,
+            include_comments,
+            include_submissions,
+        )
         reddit = self._get_client()
         rows: List[Dict] = []
+        try:
+            for subreddit_name in subreddits:
+                subreddit = reddit.subreddit(subreddit_name)
+                comment_rows = 0
+                submission_rows = 0
 
-        for subreddit_name in subreddits:
-            subreddit = reddit.subreddit(subreddit_name)
+                if include_comments:
+                    for comment in subreddit.comments(limit=limit):
+                        row = self._normalize_comment(comment, subreddit_name)
+                        if row:
+                            rows.append(row)
+                            comment_rows += 1
 
-            if include_comments:
-                for comment in subreddit.comments(limit=limit):
-                    row = self._normalize_comment(comment, subreddit_name)
-                    if row:
-                        rows.append(row)
+                if include_submissions:
+                    for submission in subreddit.hot(limit=limit):
+                        row = self._normalize_submission(submission, subreddit_name)
+                        if row:
+                            rows.append(row)
+                            submission_rows += 1
 
-            if include_submissions:
-                for submission in subreddit.hot(limit=limit):
-                    row = self._normalize_submission(submission, subreddit_name)
-                    if row:
-                        rows.append(row)
+                logger.info(
+                    "reddit_fetch_subreddit_completed subreddit=%s comment_rows=%s submission_rows=%s running_total=%s",
+                    subreddit_name,
+                    comment_rows,
+                    submission_rows,
+                    len(rows),
+                )
+        except Exception:
+            logger.exception("reddit_fetch_failed rows_collected=%s", len(rows))
+            raise
 
+        logger.info("reddit_fetch_completed total_rows=%s", len(rows))
         return rows
-
 
 
 

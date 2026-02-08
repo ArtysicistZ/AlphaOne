@@ -38,7 +38,7 @@ app.conf.broker_connection_retry_on_startup = True
 def run_batch(self):
     run_id = str(uuid.uuid4())
     started = time.time()
-    logging.info(json.dumps({
+    logger.info(json.dumps({
         "event": "run_batch_started",
         "run_id": run_id,
         "timestamp": started,
@@ -70,4 +70,3 @@ def run_batch(self):
             "task_id": self.request.id,
         }))
         raise
-

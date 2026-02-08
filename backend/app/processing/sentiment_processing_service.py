@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import date
+import logging
 
 from sqlalchemy.exc import IntegrityError
 
@@ -11,12 +12,15 @@ from app.ingestion.raw_ingest_service import claim_new_raw_posts, mark_processed
 from app.database.session import SessionLocal, init_db
 from app.database.models import SentimentData, Topic, WordFrequency
 
+logger = logging.getLogger(__name__)
+
 
 def process_batch(limit: int = 100):
     init_db()
+    logger.info("process_batch_started limit=%s", limit)
     claimed_rows = claim_new_raw_posts(limit=limit)
     if not claimed_rows:
-        print("No new raw posts to process. Exiting batch.")
+        logger.info("No new raw posts to process. Exiting batch.")
         return {"claimed": 0, "processed": 0, "failed": 0, "skipped": 0}
 
     db = SessionLocal()
@@ -67,8 +71,8 @@ def process_batch(limit: int = 100):
                         skipped_count += 1
 
                 mark_processed(item["id"])
-            except Exception as exc:
-                print(f"Error processing item {item.get('id', 'N/A')}: {exc}")
+            except Exception:
+                logger.exception("Error processing item %s", item.get("id", "N/A"))
                 db.rollback()
                 mark_failed(item["id"])
                 failed_count += 1
@@ -80,18 +84,33 @@ def process_batch(limit: int = 100):
             for word, frequency in top_100_words:
                 db.add(WordFrequency(word=word, frequency=int(frequency), date=today))
             db.commit()
-        except Exception as exc:
-            print(f"Error saving word batch to DB: {exc}")
+        except Exception:
+            logger.exception("Error saving word batch to DB")
             db.rollback()
     finally:
         db.close()
 
-    return {
+    result = {
         "claimed": len(claimed_rows),
         "processed": processed_count,
         "failed": failed_count,
         "skipped": skipped_count,
     }
-
-
-
+    logger.info(
+        "process_batch_completed claimed=%s processed=%s failed=%s skipped=%s",
+        result["claimed"],
+        result["processed"],
+        result["failed"],
+        result["skipped"],
+    )
+    if result["claimed"] > 0:
+        failure_ratio = (result["failed"] + result["skipped"]) / result["claimed"]
+        if failure_ratio >= 0.2:
+            logger.warning(
+                "process_batch_high_failure_ratio claimed=%s failed=%s skipped=%s ratio=%.3f",
+                result["claimed"],
+                result["failed"],
+                result["skipped"],
+                failure_ratio,
+            )
+    return result

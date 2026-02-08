@@ -1,10 +1,13 @@
 from sqlalchemy import create_engine, text
+import logging
 
 from app.settings import DATABASE_URL
 
+logger = logging.getLogger(__name__)
+
 
 def cleanup_old_data():
-    print("Connecting to database to clean up old data...")
+    logger.info("Connecting to database to clean up old data...")
     try:
         engine = create_engine(DATABASE_URL)
         with engine.connect() as connection:
@@ -25,13 +28,20 @@ def cleanup_old_data():
             result_words = connection.execute(query_words)
             connection.commit()
 
-            print(f"Cleanup complete. Deleted {result_sentiment.rowcount} old sentiment records.")
-            print(f"Deleted {result_words.rowcount} old word frequency records.")
-    except Exception as exc:
-        print(f"An error occurred during cleanup: {exc}")
+            logger.info(
+                "Cleanup complete. Deleted %s old sentiment records.",
+                result_sentiment.rowcount,
+            )
+            logger.info(
+                "Deleted %s old word frequency records.",
+                result_words.rowcount,
+            )
+    except Exception:
+        logger.exception("An error occurred during cleanup")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     cleanup_old_data()
 
 
