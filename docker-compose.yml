@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build: 
@@ -9,6 +7,12 @@ services:
       - "8080:8080"
     env_file:
       - ./api/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://api:8080/actuator/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build: 
@@ -20,3 +24,5 @@ services:
       - "5173:80"
     depends_on:
       - api
+
+  
