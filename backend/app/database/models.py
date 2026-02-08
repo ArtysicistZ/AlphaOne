@@ -72,10 +72,12 @@ class RawRedditPost(Base):
     text = Column(String)
     subreddit = Column(String, nullable=True)
     created_utc = Column(DateTime(timezone=True), nullable=True)
+    edited_utc = Column(DateTime(timezone=True), nullable=True)
     status = Column(String, default="new")
     fetched_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_seen_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
     fetch_count = Column(Integer, default=1)
+    content_version = Column(Integer, nullable=False, default=1)
 

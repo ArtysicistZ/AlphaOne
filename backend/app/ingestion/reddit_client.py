@@ -42,6 +42,14 @@ class RedditClient:
         if ts is None:
             return None
         return datetime.fromtimestamp(ts, tz=timezone.utc)
+    
+    @staticmethod
+    def _edited_to_utc(edited_value) -> Optional[datetime]:
+        if not edited_value or edited_value is True:
+            return None
+        if isinstance(edited_value, (int, float)):
+            return datetime.fromtimestamp(edited_value, tz=timezone.utc)
+        return None
 
     @staticmethod
     def _normalize_comment(comment, subreddit_name: str) -> Optional[Dict]:
@@ -54,6 +62,7 @@ class RedditClient:
             "text": text,
             "subreddit": subreddit_name,
             "created_utc": RedditClient._to_utc(getattr(comment, "created_utc", None)),
+            "edited_utc": RedditClient._edited_to_utc(getattr(comment, "edited", None)),
         }
 
     @staticmethod
@@ -69,6 +78,7 @@ class RedditClient:
             "text": text,
             "subreddit": subreddit_name,
             "created_utc": RedditClient._to_utc(getattr(submission, "created_utc", None)),
+            "edited_utc": RedditClient._edited_to_utc(getattr(submission, "edited", None)),
         }
 
     def fetch_raw_rows(

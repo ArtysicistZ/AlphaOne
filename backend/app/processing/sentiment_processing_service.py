@@ -44,7 +44,7 @@ def process_batch(limit: int = 100):
 
                     final_score, final_label = get_sentiment(sentence)
                     new_data_point = SentimentData(
-                        source_id=f"{item['source_id']}_s{i}",
+                        source_id=f"{item['source_id']}_v{item['content_version']}_s{i}",
                         source_type="topic_sentence",
                         sentiment_label=final_label,
                         sentiment_score=final_score,
