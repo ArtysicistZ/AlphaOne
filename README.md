@@ -1,150 +1,202 @@
-﻿# alphaone
+﻿<h1 align="center">AlphaOne</h1>
 
-alphaone is a full-stack social sentiment analytics system for market topics and tickers.
-
-It ingests Reddit data, processes sentiment at sentence level, stores results in PostgreSQL, and serves analytics through a Spring Boot API to a React frontend.
+<p align="center">
+  <img alt="Status" src="https://img.shields.io/badge/status-active-success" />
+  <img alt="Backend API" src="https://img.shields.io/badge/api-Spring%20Boot%203.5-brightgreen" />
+  <img alt="Worker" src="https://img.shields.io/badge/worker-Celery%2BRedis-red" />
+  <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-blue" />
+  <img alt="Database" src="https://img.shields.io/badge/database-PostgreSQL-336791" />
+</p>
+<p align="center">
+  Full-stack social sentiment intelligence platform for market topics and tickers.
+</p>
+<p align="center">
+  AlphaOne ingests Reddit content, runs NLP sentiment/topic extraction, stores normalized results in PostgreSQL, and serves analytics through a Spring Boot API to a React dashboard.
+</p>
 
 ## Features
+- End-to-end data flow: ingest -> process -> persist -> serve -> visualize.
+- Hourly/periodic asynchronous processing with Celery + Redis beat/worker.
+- Idempotent raw ingestion using `source_id` upsert semantics.
+- Sentence-level sentiment scoring (FinBERT) with topic tagging.
+- Read API for tracked assets, evidence feeds, daily sentiment, topic summary, and word cloud.
+- Dockerized multi-service runtime (`api`, `frontend`, `reddit-worker`, `redis`).
+- Health checks via Spring Actuator.
 
-1. End-to-end pipeline from social text to dashboard-ready metrics.
-2. Sentence-level sentiment scoring with topic tagging.
-3. Topic and ticker analytics (`AAPL`, `NVDA`, `MACRO`, `TECHNOLOGY`, etc.).
-4. Evidence view (latest sentiment sentences for a ticker).
-5. Daily sentiment time-series for charting.
-6. Topic summary sentiment score.
-7. Word cloud endpoint (`text`, `value`) from stored frequency data.
-8. CORS-enabled Spring API for local and deployed frontend integration.
-9. Separated service structure for system design growth:
-   - Python data pipeline (`backend/`)
-   - Java API service (`api/`)
-   - React frontend (`frontend/`)
+## How It Works
+```text
+Reddit API
+  -> Python ingestion client (fetch raw rows)
+  -> raw_reddit_posts upsert (idempotent by source_id)
+  -> claim "new" rows (FOR UPDATE SKIP LOCKED)
+  -> NLP processing (sentence split, sentiment, topic tagging, word counts)
+  -> PostgreSQL tables (sentiment_data, topics, word_frequency, associations)
+  -> Spring Boot read API (/api/v1/...)
+  -> React dashboard (charts, evidence, word cloud)
+```
 
-## Current Architecture
+## Architecture
 
-1. `backend/` (Python)
-   - Reddit collection and NLP processing.
-   - Writes processed rows into PostgreSQL.
-2. `api/` (Java Spring Boot)
-   - Read-focused API over PostgreSQL.
-   - Primary API layer for frontend consumption.
-3. `frontend/` (React + Vite)
-   - Fetches sentiment endpoints and renders summary UI.
+Services:
+- `frontend`: React/Vite static bundle served by Nginx.
+- `api`: Spring Boot service exposing analytics endpoints.
+- `reddit-worker`: Celery worker + beat scheduler for ingestion/processing.
+- `redis`: Broker/result backend for Celery.
+- `postgresql`: external managed DB (for example Neon), not containerized in this repo.
 
-Data flow:
+Core data model:
+- `raw_reddit_posts`: raw source payloads and ingestion status.
+- `sentiment_data`: processed sentence-level sentiment events.
+- `topics`: tracked topic taxonomy (`slug`, `name`).
+- `sentiment_topic_association`: many-to-many mapping.
+- `word_frequency`: daily aggregated word counts for word cloud.
 
-`Reddit -> Python processing -> PostgreSQL -> Spring Boot API -> React frontend`
-
-## Implemented API Endpoints (Spring)
+## API Endpoints
 
 Base URL: `http://127.0.0.1:8080`
 
-1. `GET /api/v1/assets/tracked`
-2. `GET /api/v1/signals/social-sentiment/{ticker}/evidence`
-3. `GET /api/v1/signals/social-sentiment/{ticker}/daily`
-4. `GET /api/v1/signals/social-sentiment/summary/{topicSlug}`
-5. `GET /api/v1/signals/social-sentiment/wordcloud`
-
-Operational endpoint:
-
-1. `GET /actuator/health`
+- `GET /api/v1/assets/tracked`
+- `GET /api/v1/signals/social-sentiment/{ticker}/evidence`
+- `GET /api/v1/signals/social-sentiment/{ticker}/daily`
+- `GET /api/v1/signals/social-sentiment/summary/{topicSlug}`
+- `GET /api/v1/signals/social-sentiment/wordcloud`
+- `GET /actuator/health`
 
 ## Tech Stack
-
-1. Backend data pipeline: Python, PRAW, spaCy, FinBERT, SQLAlchemy.
-2. API: Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL.
-3. Frontend: React 18, Vite, Axios, Chart.js.
-4. Database: PostgreSQL (Neon-compatible connection setup).
+- API: Java 21, Spring Boot 3.5, Spring Data JPA, Spring Actuator.
+- Worker: Python 3.11, Celery 5, Redis, SQLAlchemy, PRAW, spaCy, Transformers, PyTorch (CPU), psycopg2.
+- Frontend: React 18, React Router, Axios, Chart.js, react-d3-cloud, Vite.
+- Database: PostgreSQL.
+- Deployment: Docker + Docker Compose.
 
 ## Project Structure
-
 ```text
 alphaone/
-  backend/     # Python ingestion + NLP + batch processing
-  api/         # Spring Boot API service
-  frontend/    # React frontend
-  docs/        # Plans and technical documentation
+  api/                 # Spring Boot read API
+  backend/             # Python worker pipeline
+    app/
+      celery_app.py
+      settings.py
+      database/
+      ingestion/
+      orchestration/
+      processing/
+  frontend/            # React application
+  docs/                # Design notes and plans
+  docker-compose.yml
 ```
 
-## Local Setup
+## Requirements
+- Docker Desktop + Docker Compose plugin.
+Optional local runtimes:
+- Java 21 (for `api` local dev outside Docker).
+- Node.js 20+ (for `frontend` local dev outside Docker).
+- Python 3.11 (for worker local dev outside Docker).
+- External PostgreSQL database credentials.
+- Reddit API credentials.
 
-## Prerequisites
+## Configuration
 
-1. Python 3.10+ (for `backend/` workflow).
-2. Node.js 18+ and npm (for `frontend/`).
-3. Java 21 and Maven wrapper (for `api/`).
-4. PostgreSQL database connection string and credentials.
+### 1) Root `.env` (used by worker service)
+Create `.env` at project root with at least:
 
-## 1) Configure environment files
+```env
+DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>:<port>/<db>
+REDDIT_CLIENT_ID=
+REDDIT_SECRET_KEY=
+REDDIT_USERNAME=
+REDDIT_PASSWORD=
+REDDIT_SUBREDDITS=wallstreetbets,stocks,investing
+REDDIT_FETCH_LIMIT=100
+BATCH_PROCESS_LIMIT=100
+```
 
-1. Root `.env` is used by Python pipeline (`backend/`).
-2. `api/.env` is used by Spring API.
-3. `frontend/.env.local` can override API base URL.
+### 2) `api/.env` (used by Spring Boot)
+`application.yml` reads these keys:
 
-Example `frontend/.env.local`:
+```env
+DATABASE_URL=jdbc:postgresql://<host>:<port>/<db>?sslmode=require
+DATABASE_USERNAME=<db_user>
+DATABASE_PASSWORD=<db_password>
+```
+
+### 3) Frontend API URL
+For local Vite development, create `frontend/.env.local`:
 
 ```env
 VITE_API_URL=http://127.0.0.1:8080
 ```
 
-## 2) Run Spring API
+For Docker build, Compose passes `VITE_API_URL` as build arg.
 
+## Quick Start (Docker)
+1. Build and run:
+```bash
+docker compose up --build
+```
+2. Check running services:
+```bash
+docker compose ps
+```
+3. Verify API health:
+```bash
+curl http://127.0.0.1:8080/actuator/health
+```
+4. Open UI:
+`http://localhost:5173`
+
+## Local Development (Without Docker)
+
+### API
 ```bash
 cd api
 ./mvnw spring-boot:run
 ```
 
-Check health:
-
-```bash
-curl http://127.0.0.1:8080/actuator/health
-```
-
-## 3) Run frontend
-
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Frontend default dev URL is usually:
+### Worker
+```bash
+cd backend
+pip install -r requirements.txt
+celery -A app.celery_app worker --beat --loglevel=info --concurrency=2
+```
 
-`http://localhost:5173`
+## Operations Notes
+- Celery beat schedule is currently configured at `1 minute` in `backend/app/celery_app.py`.
+- Worker runs as non-root user in Docker (`appuser`).
+- Spring API healthcheck is configured in `docker-compose.yml`.
+CORS allows:
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+- `https://alphaone.run.place`
 
-## 4) (Optional) Run Python pipeline
+## Known Gaps
+- Frontend container currently does not ship a custom Nginx SPA fallback config (`try_files`), so deep-link refresh routes can return 404 in container mode.
+- Schema evolution is currently driven by ORM auto-create/update style behavior; formal migrations are not yet implemented.
+- End-to-end automated integration tests are still pending.
 
-Use `backend/` scripts to fetch/process new data before querying Spring endpoints.
-
-Typical files:
-
-1. `backend/core/reddit_client.py`
-2. `backend/batch_processor.py`
-
-## Notes on Data and Semantics
-
-1. `summary/{topicSlug}` currently computes average over all available rows for that topic.
-2. `/{ticker}/daily` returns a list of daily averages.
-3. `/{ticker}/evidence` returns latest 5 linked sentiment records.
-4. `wordcloud` returns top words by stored frequency.
-
-## Security Notes
-
-1. Do not commit real `.env` secrets.
-2. Rotate credentials immediately if exposed.
-3. Use `.env.example` templates for onboarding.
+## Troubleshooting
+- `error: src refspec ... does not match any`: branch name typo or no commit yet on that branch.
+- `url must start with jdbc`: Spring `DATABASE_URL` must be JDBC format.
+- `Could not resolve prop-types`: ensure `prop-types` is in frontend dependencies and lockfile is updated.
+- Celery `Permission denied: celerybeat-schedule`: use writable schedule path (for example `/tmp/celerybeat-schedule`).
 
 ## Documentation
+- `docs/TECHNICAL_OVERVIEW.md`
+- `docs/FUTURE_PLAN.md`
+- `docs/SPRING_BOOT_KNOWLEDGE_REVIEW.md`
 
-1. Future implementation roadmap: `docs/FUTURE_PLAN.md`
-2. Spring migration and review notes: `docs/SPRING_BOOT_KNOWLEDGE_REVIEW.md`
-
-## Resume-Oriented System Design Direction
-
-1. Keep API, processing, and ingestion as explicit service boundaries.
-2. Add observability (`metrics`, tracing, structured logs).
-3. Add queue-based processing and idempotent pipelines.
-4. Add integration tests and CI/CD for production-ready story.
+## Resume Positioning
+- Highlights multi-service architecture with clear service boundaries.
+- Demonstrates async pipeline orchestration and idempotent ingestion.
+- Shows cross-stack engineering: Python NLP worker + Java API + React UI.
+- Includes containerized deployment and operational health signaling.
 
 ## License
-
-No license file is currently defined.
+See `LICENSE`.
