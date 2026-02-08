@@ -1,0 +1,76 @@
+/* Modern Light SaaS Theme */
+
+:root {
+    /* --- Colors --- */
+
+    /* Layout Backgrounds */
+    --bg-app: #f9fafb;
+    /* Very light gray for full page bg */
+    --bg-card: #ffffff;
+    /* Pure white for cards */
+    --bg-hover: #f3f4f6;
+    /* Light gray hover */
+    --bg-input: #ffffff;
+
+    /* Borders */
+    --border-default: #e5e7eb;
+    /* Soft gray border */
+    --border-highlight: #d1d5db;
+    --border-focus: #4f46e5;
+    /* Indigo focus ring */
+
+    /* Accents - Professional Palette */
+    --color-primary: #4f46e5;
+    /* Indigo/Royal Blue - Main Brand */
+    --color-primary-light: #e0e7ff;
+    /* Soft Indigo background for highlights */
+    --color-secondary: #6b7280;
+    /* Neutral Slate Gray */
+
+    /* Status Colors (Standard Red/Green) */
+    --color-positive: #10b981;
+    /* Emerald Green */
+    --color-positive-bg: #d1fae5;
+    --color-negative: #ef4444;
+    /* Rose Red */
+    --color-negative-bg: #fee2e2;
+    --color-neutral: #9ca3af;
+    --color-accent: #8b5cf6;
+    /* Violet Accent */
+
+    /* Text - High Contrast for Readability */
+    --text-primary: #111827;
+    /* Almost Black - Main Content */
+    --text-secondary: #4b5563;
+    /* Dark Gray - Secondary Text */
+    --text-muted: #9ca3af;
+    /* Light Gray - Muted/Meta */
+    --text-white: #ffffff;
+    /* For buttons/tooltips */
+
+    /* --- Typography --- */
+    /* Clean Sans-serif - Professional */
+    --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Standard Monospace */
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    /* --- Spacing --- */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* --- Styles --- */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    /* Standard rounded corners */
+    --radius-lg: 12px;
+
+    /* Modern soft shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    --header-height: 64px;
+}

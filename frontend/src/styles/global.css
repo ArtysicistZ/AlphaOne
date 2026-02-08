@@ -1,0 +1,245 @@
+/* Global Reset & Modern Clean Design */
+@import './variables.css';
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    overflow: hidden;
+    /* App defines scroll regions */
+}
+
+/* Standard Scrollbar - Clean Gray */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Typography Reset */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.25;
+}
+
+p {
+    margin: 0 0 var(--space-md) 0;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: colors 0.2s;
+}
+
+a:hover {
+    color: var(--color-accent);
+    /* Slight shift on hover */
+    text-decoration: underline;
+}
+
+/* Inputs - Clean Modern Styling */
+input,
+select,
+textarea {
+    font-family: var(--font-sans);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    /* 14px */
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    /* Indigo glow ring */
+}
+
+/* Layout Utilities */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.shrink-0 {
+    flex-shrink: 0;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.gap-6 {
+    gap: 1.5rem;
+}
+
+/* SCROLL FIX UTILITY */
+.min-h-0 {
+    min-height: 0;
+}
+
+.overflow-y-auto {
+    overflow-y: auto;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+/* Modern Clean Card Component */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    /* Subtle shadow lift */
+    padding: var(--space-lg);
+    transition: box-shadow 0.2s ease;
+}
+
+/* Only subtle hover lift, not drastic */
+.card:hover {
+    box-shadow: var(--shadow-card);
+}
+
+
+/* Text Utilities */
+.text-primary {
+    color: var(--color-primary);
+}
+
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-positive {
+    color: var(--color-positive);
+}
+
+.text-negative {
+    color: var(--color-negative);
+}
+
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+}
+
+.text-xl {
+    font-size: 1.25rem;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.tracking-wide {
+    letter-spacing: 0.025em;
+}
+
+/* Button Utility */
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #4338ca;
+    /* Darker Indigo */
+    text-decoration: none;
+}
