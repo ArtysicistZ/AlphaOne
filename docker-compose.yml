@@ -25,4 +25,22 @@ services:
     depends_on:
       - api
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  reddit-worker:
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+    env_file:
+      - ./.env
+    restart: unless-stopped
+
   
