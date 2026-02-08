@@ -6,6 +6,7 @@
 !.env.example
 api/.env
 api/.env.*
+!api/.env.example
 frontend/.env.local
 frontend/.env.*.local
 backend/.env
