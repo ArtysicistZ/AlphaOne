@@ -26,7 +26,7 @@ It ingests Reddit data, processes sentiment at sentence level, stores results in
    - Writes processed rows into PostgreSQL.
 2. `api/` (Java Spring Boot)
    - Read-focused API over PostgreSQL.
-   - Route parity with prior FastAPI endpoints.
+   - Primary API layer for frontend consumption.
 3. `frontend/` (React + Vite)
    - Fetches sentiment endpoints and renders summary UI.
 
