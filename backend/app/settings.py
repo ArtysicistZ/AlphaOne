@@ -15,5 +15,5 @@ REDDIT_SUBREDDITS = [
     if s.strip()
 ]
 
-FETCH_LIMIT = int(os.getenv("REDDIT_FETCH_LIMIT", "100"))
-PROCESS_LIMIT = int(os.getenv("BATCH_PROCESS_LIMIT", "100"))
+REDDIT_FETCH_LIMIT = int(os.getenv("REDDIT_FETCH_LIMIT", "100"))
+BATCH_PROCESS_LIMIT = int(os.getenv("BATCH_PROCESS_LIMIT", "100"))
