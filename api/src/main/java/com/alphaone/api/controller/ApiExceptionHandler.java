@@ -7,14 +7,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.ResponseEntity;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.OffsetDateTime;
 
 
 @RestController
 public class ApiExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiExceptionHandler.class);
     
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(
@@ -26,6 +32,12 @@ public class ApiExceptionHandler {
             OffsetDateTime.now(),
             status.value(),
             status.getReasonPhrase(),
+            ex.getReason(),
+            request.getRequestURI()
+        );
+        logger.warn(
+            "api_exception type=ResponseStatusException status={} reason={} path={}",
+            status.value(),
             ex.getReason(),
             request.getRequestURI()
         );
@@ -45,6 +57,12 @@ public class ApiExceptionHandler {
             "Validation failed",
             request.getRequestURI()
         );
+        logger.warn(
+            "api_exception type=MethodArgumentNotValidException status={} message={} path={}",
+            status.value(),
+            ex.getMessage(),
+            request.getRequestURI()
+        );
         return ResponseEntity.status(status).body(errorResponse);
     }
 
@@ -60,6 +78,13 @@ public class ApiExceptionHandler {
             status.getReasonPhrase(),
             "An unexpected error occurred",
             request.getRequestURI()
+        );
+        logger.error(
+            "api_exception type=GenericException status={} message={} path={}",
+            status.value(),
+            ex.getMessage(),
+            request.getRequestURI(),
+            ex
         );
         return ResponseEntity.status(status).body(errorResponse);
     }

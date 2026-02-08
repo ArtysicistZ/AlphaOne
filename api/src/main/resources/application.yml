@@ -7,3 +7,10 @@ spring:
     hibernate:
         ddl-auto: update
     show-sql: true
+  
+logging:
+  level:
+    root: INFO
+    '[com.alphaone]': INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId}] - %logger{36} - %msg%n"
