@@ -101,7 +101,6 @@ Optional local runtimes:
 Create `.env` at project root with at least:
 
 ```env
-DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>:<port>/<db>
 REDDIT_CLIENT_ID=
 REDDIT_SECRET_KEY=
 REDDIT_USERNAME=
@@ -177,26 +176,7 @@ CORS allows:
 - `https://alphaone.run.place`
 
 ## Known Gaps
-- Frontend container currently does not ship a custom Nginx SPA fallback config (`try_files`), so deep-link refresh routes can return 404 in container mode.
-- Schema evolution is currently driven by ORM auto-create/update style behavior; formal migrations are not yet implemented.
 - End-to-end automated integration tests are still pending.
 
 ## Troubleshooting
-- `error: src refspec ... does not match any`: branch name typo or no commit yet on that branch.
 - `url must start with jdbc`: Spring `DATABASE_URL` must be JDBC format.
-- `Could not resolve prop-types`: ensure `prop-types` is in frontend dependencies and lockfile is updated.
-- Celery `Permission denied: celerybeat-schedule`: use writable schedule path (for example `/tmp/celerybeat-schedule`).
-
-## Documentation
-- `docs/TECHNICAL_OVERVIEW.md`
-- `docs/FUTURE_PLAN.md`
-- `docs/SPRING_BOOT_KNOWLEDGE_REVIEW.md`
-
-## Resume Positioning
-- Highlights multi-service architecture with clear service boundaries.
-- Demonstrates async pipeline orchestration and idempotent ingestion.
-- Shows cross-stack engineering: Python NLP worker + Java API + React UI.
-- Includes containerized deployment and operational health signaling.
-
-## License
-See `LICENSE`.
