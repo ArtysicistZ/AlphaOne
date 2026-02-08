@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^1.13.1",
     "chart.js": "^4.5.1",
+    "prop-types": "^15.8.1",
     "react": "^18.1.1",
     "react-chartjs-2": "^5.3.1",
     "react-d3-cloud": "^1.0.6",
@@ -23,6 +24,7 @@
     "@types/react": "^18.1.1",
     "@types/react-dom": "^18.1.1",
     "@vitejs/plugin-react": "^5.0.4",
+    "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",

@@ -17,13 +17,11 @@ export const getSentimentEvidence = async (ticker) => {
   return response.data;
 };
 
-// --- 1. ADD THIS NEW FUNCTION (for the widgets) ---
 export const getTopicSummary = async (topicSlug) => {
   const response = await apiClient.get(`/signals/social-sentiment/summary/${topicSlug}`);
   return response.data; // Returns { day: "...", average_score: 0.123 }
 };
 
-// --- 2. ADD THIS NEW FUNCTION (for the word cloud) ---
 export const getWordCloudData = async () => {
   const response = await apiClient.get('/signals/social-sentiment/wordcloud');
   return response.data; // Returns [{ text: "word", value: 10 }, ...]

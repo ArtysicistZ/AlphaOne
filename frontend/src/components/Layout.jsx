@@ -17,8 +17,7 @@ function Layout() {
       }}>
         <Outlet />
       </main>
-
-      <Footer />
+      
     </>
   );
 }

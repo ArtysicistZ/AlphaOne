@@ -72,6 +72,7 @@ backend/data/reddit/processed/
 # --------------------------------------------
 .idea/
 .vscode/*
+.vscode
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
@@ -81,4 +82,4 @@ Thumbs.db
 # --------------------------------------------
 # Misc local folders
 # --------------------------------------------
-.docs
+docs/

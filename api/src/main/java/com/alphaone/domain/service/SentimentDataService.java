@@ -91,7 +91,9 @@ public class SentimentDataService {
                     )
                 );
 
-        return grouped.entrySet().stream()
+        return grouped
+            .entrySet()
+            .stream()
             .map(
                 entry -> new DailySentimentDto(entry.getKey(), 
                 entry.getValue().getAverage())

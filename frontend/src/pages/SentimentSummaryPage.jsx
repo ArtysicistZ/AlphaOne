@@ -4,7 +4,7 @@ import {
   getWordCloudData, 
   getTopicSummary, 
   getSentimentEvidence,
-  getTrackedAssets // <-- MODIFIED: Import new function
+  getTrackedAssets
 } from '../api/sentimentApi';
 
 // --- (Your SummaryWidget and TickerSearchResult components are unchanged) ---
@@ -20,7 +20,7 @@ function SummaryWidget({ title, score }) {
 }
 function TickerSearchResult({ ticker, evidence, summary }) {
   if (!ticker || !summary) return null;
-  const scoreColor = summary.average_score > 0 ? 'green' : summary.average_score < 0 ? 'red' : 'gray';
+  const scoreColor = summary.averageScore > 0 ? 'green' : summary.averageScore < 0 ? 'red' : 'gray';
   return (
     <div style={{ 
         marginTop: '20px', 
@@ -33,17 +33,17 @@ function TickerSearchResult({ ticker, evidence, summary }) {
       <p style={{fontSize: '1.2rem', fontWeight: 'bold'}}>
         Today's Average Score: 
         <span style={{ color: scoreColor, marginLeft: '10px' }}>
-          {summary.average_score.toFixed(4)}
+          {(summary.averageScore ?? 0).toFixed(4)}
         </span>
       </p>
       <h4>Sample Sentences (Evidence):</h4>
       <ul style={{ listStyle: 'none', padding: 0, textAlign: 'left' }}>
         {evidence.map((item) => (
           <li key={item.id} style={{ borderBottom: '1px solid #ddd', padding: '10px 0' }}>
-            <strong style={{ color: item.sentiment_label === 'positive' ? 'green' : item.sentiment_label === 'negative' ? 'red' : 'gray', marginRight: '10px' }}>
-              [{item.sentiment_label.toUpperCase()}]
+            <strong style={{ color: (item.sentimentLabel ?? '') === 'positive' ? 'green' : item.sentimentLabel === 'negative' ? 'red' : 'gray', marginRight: '10px' }}>
+              [{(item.sentimentLabel ?? 'neutral').toUpperCase()}]
             </strong> 
-            {item.relevant_text}
+            {item.relevantText}
           </li>
         ))}
       </ul>
@@ -70,8 +70,8 @@ function SentimentSummaryPage() {
   // Fetch summary data when the page loads
   useEffect(() => {
     // 1. Fetch general topics
-    getTopicSummary('MACRO').then(data => setMacroScore(data.average_score)).catch(err => console.error("Could not fetch MACRO", err));
-    getTopicSummary('TECHNOLOGY').then(data => setTechScore(data.average_score)).catch(err => console.error("Could not fetch TECHNOLOGY", err));
+    getTopicSummary('MACRO').then(data => setMacroScore(data.averageScore)).catch(err => console.error("Could not fetch MACRO", err));
+    getTopicSummary('TECHNOLOGY').then(data => setTechScore(data.averageScore)).catch(err => console.error("Could not fetch TECHNOLOGY", err));
 
     // 2. Fetch word cloud data
     getWordCloudData().then(data => {setWordCloudData(data);}).catch(err => console.error("Could not fetch Word Cloud", err));
