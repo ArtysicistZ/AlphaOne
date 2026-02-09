@@ -12,4 +12,4 @@ COPY . .
 RUN adduser --disabled-password --gecos '' appuser
 USER appuser
 
-CMD ["celery", "-A", "app.celery_app", "worker", "--beat", "--loglevel=info", "--concurrency=2", "--schedule=/tmp/celerybeat-schedule"]
+CMD ["celery", "-A", "app.celery_app", "worker", "--beat", "--loglevel=info", "--concurrency=1", "--schedule=/tmp/celerybeat-schedule"]
