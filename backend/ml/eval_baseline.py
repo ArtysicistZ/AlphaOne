@@ -17,7 +17,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, EvalPrediction
 
-from ml.train_finbert import (
+from ml.train_base import (
     load_labeled_data,
     compute_metrics,
     DEFAULT_MODEL,

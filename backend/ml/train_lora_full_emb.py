@@ -42,7 +42,7 @@ from app.processing.sentiment_tagger.topic_definitions import SENTENCE_TOPIC_MAP
 from app.processing.sentiment_tagger.tagger_logic import _GENERAL_TOPICS
 
 # Reuse shared components from main training script
-from ml.train_finbert import (
+from ml.train_base import (
     DEFAULT_MODEL,
     MAX_LENGTH,
     LABEL2ID,
