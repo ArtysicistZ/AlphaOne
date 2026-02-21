@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Table, ForeignKey, Text
 from sqlalchemy import Date, func
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.schema import UniqueConstraint
@@ -80,4 +80,62 @@ class RawRedditPost(Base):
     )
     fetch_count = Column(Integer, default=1)
     content_version = Column(Integer, nullable=False, default=1)
+
+
+class ProcessedSentence(Base):
+    __tablename__ = "processed_sentences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    raw_post_id = Column(Integer, ForeignKey("raw_reddit_posts.id"), nullable=False)
+    source_id = Column(String, unique=True, index=True)
+    sentence_index = Column(Integer, nullable=False)
+    sentence_text = Column(String, nullable=False)
+    subject = Column(String, nullable=False, index=True)
+    sentiment_label = Column(String)
+    sentiment_score = Column(Float)
+    subreddit = Column(String, nullable=True)
+    created_utc = Column(DateTime(timezone=True), nullable=True)
+    processed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("raw_post_id", "sentence_index", "subject", name="_raw_sent_subj_uc"),
+    )
+
+
+# ── 3NF Training Tables ──────────────────────────────────────────────────
+# Sentence text is stored once; subjects are in a separate child table.
+
+
+class TrainingSentence(Base):
+    __tablename__ = "training_sentences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    raw_post_id = Column(Integer, ForeignKey("raw_reddit_posts.id"), nullable=False)
+    sentence_index = Column(Integer, nullable=False)
+    normalized_text = Column(Text, nullable=False)
+    subreddit = Column(String, nullable=True)
+    created_utc = Column(DateTime(timezone=True), nullable=True)
+    processed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    subjects = relationship("TrainingSentenceSubject", back_populates="sentence", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("raw_post_id", "sentence_index", name="_train_raw_sent_uc"),
+    )
+
+
+class TrainingSentenceSubject(Base):
+    __tablename__ = "training_sentence_subjects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sentence_id = Column(Integer, ForeignKey("training_sentences.id", ondelete="CASCADE"), nullable=False)
+    subject = Column(String, nullable=False, index=True)
+    sentiment_label = Column(String, nullable=True)
+    sentiment_confidence = Column(Float, nullable=True)
+
+    sentence = relationship("TrainingSentence", back_populates="subjects")
+
+    __table_args__ = (
+        UniqueConstraint("sentence_id", "subject", name="_train_sent_subj_uc"),
+    )
 

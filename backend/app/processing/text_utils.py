@@ -9,7 +9,10 @@ def _get_nlp():
     global _NLP
     if _NLP is None:
         try:
-            _NLP = spacy.load("en_core_web_md")
+            _NLP = spacy.load(
+                "en_core_web_md",
+                disable=["tagger", "ner", "lemmatizer", "attribute_ruler"],
+            )
         except Exception as exc:
             raise RuntimeError("Failed to load spaCy model 'en_core_web_md'") from exc
     return _NLP

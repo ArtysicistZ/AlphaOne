@@ -1,0 +1,4 @@
+# ML training dependencies (install on top of backend/requirements.txt)
+# pip install -r ml/requirements.txt
+scikit-learn>=1.5.0,<2
+accelerate>=1.0.0,<2
