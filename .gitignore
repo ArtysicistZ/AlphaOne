@@ -74,6 +74,7 @@ backend/data/reddit/processed/
 .idea/
 .vscode/*
 .vscode
+.claude
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
@@ -84,3 +85,4 @@ Thumbs.db
 # Misc local folders
 # --------------------------------------------
 docs/
+backend/ml/models/
