@@ -9,7 +9,7 @@
   <img alt="ML" src="https://img.shields.io/badge/ML-PyTorch%20%2B%20Transformers-orange" />
 </p>
 <p align="center">
-  Real-time stock sentiment tracker powered by Reddit and a fine-tuned BERT model.
+  Real-time stock sentiment tracker powered by Reddit and a fine-tuned DeBERTa-v3 model with subject-aware sentiment analysis.
 </p>
 
 ---
@@ -18,7 +18,7 @@
 
 AlphaOne monitors Reddit communities (r/wallstreetbets, r/stocks, r/investing, etc.) and analyzes what people are saying about individual stocks. For each stock mention, it determines whether the sentiment is **bullish**, **bearish**, or **neutral** — and surfaces this through a web dashboard with charts, evidence feeds, and word clouds.
 
-The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contains **two different sentiments** for two different stocks. Off-the-shelf sentiment models produce a single label for the entire sentence. AlphaOne solves this with a **custom fine-tuned BERT model** that classifies sentiment **per stock** within the same sentence.
+The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contains **two different sentiments** for two different stocks. Off-the-shelf sentiment models produce a single label for the entire sentence. AlphaOne solves this with **Aspect-Based Sentiment Analysis (ABSA)** using a fine-tuned [DeBERTa-v3](https://huggingface.co/ArtysicistZ/absa-deberta) model that classifies sentiment **per stock** within the same sentence.
 
 ## How It Works
 
@@ -32,13 +32,12 @@ The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contain
   PostgreSQL (raw_reddit_posts)
       |  stored as-is for reprocessing
       v
-  NLP Pipeline
-      |  1. split post into sentences
-      |  2. detect which stocks are mentioned (100+ tickers)
-      |  3. classify sentiment per stock (fine-tuned BERT)
-      |  4. aggregate word frequencies
+  NLP Pipeline (3-pass batch processing)
+      |  1. split into sentences, normalize tickers, apply entity replacement
+      |  2. batch inference — single forward pass through ABSA-DeBERTa
+      |  3. batch commit per-subject sentiment results to database
       v
-  PostgreSQL (sentiment_data, topics, word_frequency)
+  PostgreSQL (sentiment_data, topics)
       |
       v
   Spring Boot API (/api/v1/...)
@@ -65,33 +64,44 @@ The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contain
 
 Standard sentiment models like [FinBERT](https://huggingface.co/ProsusAI/finbert) produce one label per sentence. They cannot distinguish that *"AAPL is great but TSLA is doomed"* is bullish for Apple and bearish for Tesla. This is a known NLP problem called **Aspect-Based Sentiment Analysis (ABSA)** — classifying sentiment toward a specific entity within a sentence.
 
-### Our Approach
+### Our Approach: Entity Replacement
 
-We fine-tuned a BERT-class model to take both a sentence and a target stock as input:
+We fine-tuned [DeBERTa-v3-base](https://huggingface.co/microsoft/deberta-v3-base) to classify sentiment toward a **specific stock** in a multi-stock sentence. The key technique is **entity replacement** (inspired by the [SEntFiN](https://arxiv.org/abs/2305.17816) methodology):
 
 ```
 Input:    "AAPL is great but TSLA is doomed"  +  target: AAPL
-Process:  "[TARGET] is great but [OTHER] is doomed"  (entity replacement)
-Output:   bullish
+                          ↓ entity replacement
+Model sees:  "[TARGET] is great but [OTHER] is doomed"
+Output:       bullish (for AAPL)
 ```
 
-The target stock is replaced with `[TARGET]` and all other stock tickers with `[OTHER]`, so the model learns to focus on the sentiment expressed toward the target entity regardless of which specific stock it is.
+```
+Same sentence  +  target: TSLA
+                          ↓ entity replacement
+Model sees:  "[OTHER] is great but [TARGET] is doomed"
+Output:       bearish (for TSLA)
+```
 
-Training data: ~3,500 (sentence, stock, label) triples extracted from Reddit posts, labeled by a local LLM (qwen2.5:3b via Ollama) with a carefully balanced few-shot prompt.
+The target stock is replaced with `[TARGET]` and all other tickers with `[OTHER]`. This forces the model to associate sentiment with position rather than memorizing specific ticker names — making it generalize to any stock.
+
+**Training data:** ~3,500 (sentence, stock, label) triples extracted from Reddit posts, labeled by a local LLM (qwen2.5:3b via Ollama) with a carefully balanced few-shot prompt.
+
+**Production model:** [`ArtysicistZ/absa-deberta`](https://huggingface.co/ArtysicistZ/absa-deberta) — hosted on Hugging Face, downloaded automatically at runtime.
 
 ### Results
 
-We ran an ablation study across four transformer architectures. Best result: **80.5% accuracy** — up from **54.3%** using FinBERT out of the box with no fine-tuning.
+We ran an ablation study across four transformer architectures with both LoRA and full fine-tuning:
 
-| Model | Method | Accuracy | Macro F1 |
-|-------|--------|----------|----------|
-| FinBERT (no fine-tuning) | — | 54.3% | 0.433 |
-| FinBERT | Fine-tuned | 75.9% | 0.703 |
-| **RoBERTa (twitter-roberta)** | **Fine-tuned** | **79.6%** | **0.756** |
-| **DeBERTa-v3-base** | **Fine-tuned** | **80.5%** | **0.757** |
-| BERTweet | Fine-tuned | 75.1% | 0.700 |
+| Model | Method | Accuracy | Macro F1 | Bull F1 | Bear F1 | Neut F1 |
+|-------|--------|----------|----------|---------|---------|---------|
+| FinBERT (no fine-tuning) | — | 54.3% | 0.433 | — | — | — |
+| FinBERT | Fine-tuned | 75.9% | 0.703 | — | — | — |
+| BERTweet | Fine-tuned | 75.1% | 0.700 | — | — | — |
+| RoBERTa (twitter-roberta) | Fine-tuned | 79.6% | 0.756 | — | — | — |
+| DeBERTa-v3-base | LoRA | 80.5% | 0.757 | — | — | — |
+| **DeBERTa-v3-base** | **Full FT (deployed)** | **79.4%** | **0.754** | **0.662** | **0.759** | **0.843** |
 
-Macro F1 measures balanced performance across all three classes (bullish/bearish/neutral). DeBERTa-v3 and RoBERTa tied on F1 — DeBERTa edges ahead on accuracy.
+The deployed model uses full fine-tuning (lr=1e-5, epoch 7/10, ~86M params) for the most stable inference. Macro F1 measures balanced performance across all three classes (bullish/bearish/neutral).
 
 Full design details, hyperparameters, and per-run metrics: [`docs/FINBERT_FINETUNING_DESIGN.md`](docs/FINBERT_FINETUNING_DESIGN.md)
 
@@ -117,12 +127,12 @@ alphaone/
       celery_app.py        # Celery configuration and beat schedule
       database/            # SQLAlchemy models and session
       ingestion/           # Reddit data ingestion (PRAW)
-      processing/          # NLP pipeline: sentiment, topic tagging, word cloud
+      processing/          # NLP pipeline: sentiment, topic tagging, entity replacement
     ml/                    # ML training (not used at runtime)
-      train_finbert.py     # Fine-tuning entry point
+      train_base.py        # Fine-tuning entry point
       eval_baseline.py     # Baseline evaluation (no fine-tuning)
       data/                # Training data: labeling, building, prompts
-      models/              # Saved model checkpoints
+      models/              # Saved model checkpoints (gitignored)
   frontend/                # React dashboard application
   docs/                    # Design documents
   docker-compose.yml
@@ -149,7 +159,6 @@ REDDIT_USERNAME=<your_username>
 REDDIT_PASSWORD=<your_password>
 REDDIT_SUBREDDITS=wallstreetbets,stocks,investing
 REDDIT_FETCH_LIMIT=100
-BATCH_PROCESS_LIMIT=100
 ```
 
 **2. `api/.env`** — used by the Spring Boot API:
@@ -197,17 +206,14 @@ celery -A app.celery_app worker --beat --loglevel=info --concurrency=2
 
 ### ML Training (Optional)
 
-Training requires a CUDA-capable GPU. The worker uses a pre-trained model checkpoint at runtime — you only need this if you want to retrain the sentiment model.
+Training requires a CUDA-capable GPU. The worker downloads the model from Hugging Face at runtime — you only need this if you want to retrain the sentiment model.
 
 ```bash
 cd backend
 pip install -r ml/requirements.txt
 
-# Fine-tune with default settings (RoBERTa + LoRA)
-python -m ml.train_finbert
-
-# Full fine-tune with DeBERTa-v3 (best accuracy)
-python -m ml.train_finbert --model microsoft/deberta-v3-base --no-lora --freeze-layers 0 --lr 2e-5 --epochs 10
+# Full fine-tune with DeBERTa-v3 (production config)
+python -m ml.train_base --model microsoft/deberta-v3-base --no-lora --freeze-layers 0 --lr 1e-5 --epochs 7
 ```
 
 ---
