@@ -51,7 +51,7 @@ class SentimentData(Base):
         back_populates="sentiments",
     )
 
-
+'''
 class WordFrequency(Base):
     __tablename__ = "word_frequency"
 
@@ -61,6 +61,7 @@ class WordFrequency(Base):
     date = Column(Date, index=True, nullable=False, server_default=func.current_date())
 
     __table_args__ = (UniqueConstraint("word", "date", name="_word_date_uc"),)
+'''
 
 
 class RawRedditPost(Base):

@@ -20,7 +20,7 @@ app = Celery(
 app.conf.beat_schedule = {
     "run_batch_periodically": {
         "task": "app.celery_app.run_batch",
-        "schedule": timedelta(minutes=1),
+        "schedule": timedelta(minutes=120),  # Run every 2 hours
     },
 }
 app.conf.timezone = "UTC"
@@ -45,7 +45,7 @@ def run_batch(self):
     }))
 
     try:
-        result = run_pipeline_once(REDDIT_SUBREDDITS, REDDIT_FETCH_LIMIT, BATCH_PROCESS_LIMIT)
+        result = run_pipeline_once(REDDIT_SUBREDDITS, REDDIT_FETCH_LIMIT)
 
         duration_ms = int((time.time() - started) * 1000)
         logger.info(json.dumps({

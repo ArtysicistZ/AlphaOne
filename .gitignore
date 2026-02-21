@@ -85,4 +85,4 @@ Thumbs.db
 # Misc local folders
 # --------------------------------------------
 docs/
-backend/ml/models/
+backend/ml/models/*

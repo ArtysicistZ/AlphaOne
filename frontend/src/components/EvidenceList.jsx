@@ -25,8 +25,8 @@ const formatScore = (score) => {
 };
 
 const toneClass = (sentiment) => {
-  if (sentiment === 'POSITIVE') return 'is-positive';
-  if (sentiment === 'NEGATIVE') return 'is-negative';
+  if (sentiment === 'POSITIVE' || sentiment === 'BULLISH') return 'is-positive';
+  if (sentiment === 'NEGATIVE' || sentiment === 'BEARISH') return 'is-negative';
   return 'is-neutral';
 };
 
