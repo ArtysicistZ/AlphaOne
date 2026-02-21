@@ -1,5 +1,5 @@
 """
-Evaluate a base pre-trained model (no fine-tuning) on our val/test set.
+Evaluate a base pre-trained model (no fine-tuning) on our test set.
 
 This gives a sentence-level sentiment baseline to compare against
 our entity-replacement fine-tuned model.
@@ -46,17 +46,14 @@ def main():
     # ── 2. Same stratified split as training (seed=42) ───────────────
     #    Use original texts (no entity replacement) since base model
     #    doesn't know [TARGET]/[OTHER] tokens.
+    #    Train 90% / Test 10% — same split as train_finbert.py.
 
-    all_texts, test_texts, all_labels, test_labels = train_test_split(
+    train_texts, test_texts, train_labels, test_labels = train_test_split(
         texts, labels,
         test_size=0.1, random_state=SEED, stratify=labels,
     )
-    train_texts, val_texts, train_labels, val_labels = train_test_split(
-        all_texts, all_labels,
-        test_size=0.111, random_state=SEED, stratify=all_labels,
-    )
 
-    print(f"Val: {len(val_texts)}, Test: {len(test_texts)}")
+    print(f"Train: {len(train_texts)} (not used), Test: {len(test_texts)}")
     print()
 
     # ── 3. Load base model ───────────────────────────────────────────
@@ -88,20 +85,11 @@ def main():
             all_logits.append(logits.cpu().numpy())
         return np.concatenate(all_logits, axis=0)
 
-    print("Running inference on val set...")
-    val_logits = predict_batch(val_texts)
-    val_labels_np = np.array(val_labels)
-
     print("Running inference on test set...")
     test_logits = predict_batch(test_texts)
     test_labels_np = np.array(test_labels)
 
     # ── 5. Compute metrics ───────────────────────────────────────────
-
-    print("\n=== Validation Results (Base Model) ===")
-    val_metrics = compute_metrics(EvalPrediction(predictions=val_logits, label_ids=val_labels_np))
-    for key in sorted(val_metrics):
-        print(f"  {key}: {val_metrics[key]:.4f}")
 
     print("\n=== Test Results (Base Model) ===")
     test_metrics = compute_metrics(EvalPrediction(predictions=test_logits, label_ids=test_labels_np))

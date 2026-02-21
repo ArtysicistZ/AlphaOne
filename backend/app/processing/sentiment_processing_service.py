@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.processing.nlp_processor import get_sentiment
 from app.processing.wordcloud.word_counter import get_word_counts
 from app.processing.text_utils import split_into_sentences
-from app.processing.sentiment_tagger.tagger_logic import get_topics_from_sentence, normalize_and_tag_sentence
+from app.processing.sentiment_tagger.tagger_logic import get_topics_from_sentence, normalize_and_tag_sentence, MAX_TICKERS_PER_SENTENCE
 from app.ingestion.raw_ingest_service import claim_new_raw_posts, mark_processed, mark_failed
 from app.database.session import SessionLocal, init_db
 from app.database.models import SentimentData, Topic, WordFrequency, ProcessedSentence
@@ -44,6 +44,8 @@ def process_batch(limit: int = 100):
                 for i, sentence in enumerate(sentences):
                     topics_in_sentence = get_topics_from_sentence(sentence)
                     if not topics_in_sentence:
+                        continue
+                    if len(topics_in_sentence) > MAX_TICKERS_PER_SENTENCE:
                         continue
 
                     final_score, final_label = get_sentiment(sentence)
@@ -147,6 +149,8 @@ def reprocess_batch(limit: int = 100):
                 for i, sentence in enumerate(sentences):
                     normalized_text, topics_in_sentence = normalize_and_tag_sentence(sentence)
                     if not topics_in_sentence:
+                        continue
+                    if len(topics_in_sentence) > MAX_TICKERS_PER_SENTENCE:
                         continue
 
                     final_score, final_label = get_sentiment(sentence)

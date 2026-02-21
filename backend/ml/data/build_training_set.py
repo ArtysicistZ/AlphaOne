@@ -28,7 +28,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import init_db, SessionLocal
 from app.database.models import RawRedditPost, TrainingSentence, TrainingSentenceSubject
 from app.processing.text_utils import split_into_sentences
-from app.processing.sentiment_tagger.tagger_logic import normalize_and_tag_sentence, _GENERAL_TOPICS
+from app.processing.sentiment_tagger.tagger_logic import normalize_and_tag_sentence, _GENERAL_TOPICS, MAX_TICKERS_PER_SENTENCE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,6 +86,8 @@ def build_training_set(batch_size: int = BATCH_SIZE) -> dict:
                         # Drop general topics (MACRO, TECHNOLOGY) — too broad for training
                         topics = topics - _GENERAL_TOPICS
                         if not topics:
+                            continue
+                        if len(topics) > MAX_TICKERS_PER_SENTENCE:
                             continue
 
                         train_sent = TrainingSentence(

@@ -5,6 +5,10 @@ from .topic_definitions import SENTENCE_TOPIC_MAP
 # (replacing "inflation" with "MACRO" would destroy meaning)
 _GENERAL_TOPICS = frozenset({"MACRO", "TECHNOLOGY"})
 
+# Sentences mentioning too many tickers are portfolio lists / tables —
+# no meaningful per-stock sentiment signal.
+MAX_TICKERS_PER_SENTENCE = 7
+
 
 def get_topics_from_sentence(sentence: str) -> set[str]:
     """
