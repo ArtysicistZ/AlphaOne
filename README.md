@@ -92,18 +92,21 @@ The target stock is replaced with `[TARGET]` and all other tickers with `[OTHER]
 
 We ran an ablation study across four transformer architectures with both LoRA and full fine-tuning:
 
-| Model | Method | Accuracy | Macro F1 | Bull F1 | Bear F1 | Neut F1 |
-|-------|--------|----------|----------|---------|---------|---------|
-| FinBERT (no fine-tuning) | — | 54.3% | 0.433 | — | — | — |
-| FinBERT | Fine-tuned | 75.9% | 0.703 | — | — | — |
-| BERTweet | Fine-tuned | 75.1% | 0.700 | — | — | — |
-| RoBERTa (twitter-roberta) | Fine-tuned | 79.6% | 0.756 | — | — | — |
-| DeBERTa-v3-base | LoRA | 80.5% | 0.757 | — | — | — |
-| **DeBERTa-v3-base** | **Full FT (deployed)** | **79.4%** | **0.754** | **0.662** | **0.759** | **0.843** |
+| Model          | Model Params | Method          | Trainable | Acc   | F1    | Bull  | Bear  | Neut  |
+|----------------|:------------:|-----------------|:---------:|:-----:|:-----:|:-----:|:-----:|:-----:|
+| RoBERTa (base) | 125M         | —               | —         | 25.4% | 0.221 | 0.107 | 0.307 | 0.249 |
+| FinBERT (base) | 125M         | —               | —         | 54.3% | 0.433 | 0.162 | 0.475 | 0.662 |
+| FinBERT        | 125M         | Full FT         | 125M      | 75.9% | 0.703 | 0.548 | 0.740 | 0.820 |
+| FinBERT        | 125M         | LoRA r8 + embed | 33M       | 73.8% | 0.687 | 0.559 | 0.696 | 0.806 |
+| BERTweet       | 135M         | Full FT         | 135M      | 75.1% | 0.700 | 0.562 | 0.715 | 0.822 |
+| RoBERTa        | 125M         | LoRA r8         | 1M        | 71.3% | 0.681 | 0.565 | 0.708 | 0.770 |
+| RoBERTa        | 125M         | LoRA r8         | 1M        | 73.6% | 0.696 | 0.568 | 0.722 | 0.797 |
+| RoBERTa        | 125M         | LoRA r8 + embed | 33M       | 76.3% | 0.717 | 0.593 | 0.735 | 0.823 |
+| RoBERTa        | 125M         | LoRA r8 + embed | 33M       | 77.6% | 0.724 | 0.593 | 0.733 | 0.845 |
+| RoBERTa        | 125M         | Full FT         | 125M      | 79.6% | 0.756 | 0.667 | 0.749 | 0.851 |
+| **DeBERTa-v3** | **86M**      | **Full FT**     | **86M**   |**79.4%**|**0.754**|**0.662**|**0.759**|**0.843**|
 
-The deployed model uses full fine-tuning (lr=1e-5, epoch 7/10, ~86M params) for the most stable inference. Macro F1 measures balanced performance across all three classes (bullish/bearish/neutral).
-
-Full design details, hyperparameters, and per-run metrics: [`docs/FINBERT_FINETUNING_DESIGN.md`](docs/FINBERT_FINETUNING_DESIGN.md)
+The deployed model uses full fine-tuning (lr=1e-5, epoch 7, ~86M params) for the most stable inference. Macro F1 measures balanced performance across all three classes (bullish/bearish/neutral).
 
 ---
 
@@ -134,7 +137,6 @@ alphaone/
       data/                # Training data: labeling, building, prompts
       models/              # Saved model checkpoints (gitignored)
   frontend/                # React dashboard application
-  docs/                    # Design documents
   docker-compose.yml
 ```
 
