@@ -220,6 +220,7 @@ class WeightedTrainer(Trainer):
 DATA_DIR = Path(__file__).resolve().parent / "data" / "datasets"
 AUDITED_CSV = DATA_DIR / "audit_working.csv"
 SYNTHETIC_CSV = DATA_DIR / "synthetic_multitarget.csv"
+ERROR_SYNTHETIC_CSV = DATA_DIR / "error_targeted_synthetic.csv"
 
 
 def _load_csv(path: Path) -> tuple[list[str], list[str], list[int]]:
@@ -248,6 +249,10 @@ def load_labeled_data() -> tuple[list[str], list[str], list[int]]:
 def load_synthetic_multitarget() -> tuple[list[str], list[str], list[int]]:
     """Load synthetic multi-target sentences from synthetic_multitarget.csv."""
     return _load_csv(SYNTHETIC_CSV)
+
+def load_error_targeted_synthetic() -> tuple[list[str], list[str], list[int]]:
+    """Load error-targeted synthetic sentences from error_targeted_synthetic.csv."""
+    return _load_csv(ERROR_SYNTHETIC_CSV)
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────
@@ -412,6 +417,8 @@ def main():
     )
     parser.add_argument("--no-synthetic", action="store_true",
                         help="Disable synthetic multi-target data (default: enabled)")
+    parser.add_argument("--no-error-synthetic", action="store_true",
+                        help="Disable error-targeted synthetic data (default: enabled)")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -446,6 +453,15 @@ def main():
         labels.extend(syn_labels)
         print(f"Synthetic:        {len(syn_texts)} multi-target pairs")
         print(f"Combined:         {len(texts)} total pairs")
+
+    if not args.no_error_synthetic:
+        err_texts, err_subjects, err_labels = load_error_targeted_synthetic()
+        texts.extend(err_texts)
+        subjects.extend(err_subjects)
+        labels.extend(err_labels)
+        print(f"Error-targeted:   {len(err_texts)} pairs")
+        print(f"Combined:         {len(texts)} total pairs")
+
     print()
 
     # ── 2. Apply entity replacement ──────────────────────────────────
