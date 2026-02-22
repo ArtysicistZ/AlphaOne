@@ -5,7 +5,7 @@ import os
 import logging
 
 
-_MODEL_ID = "ArtysicistZ/absa-deberta"
+_MODEL_ID = "ArtysicistZ/deberta-absa-v2"
 _MAX_LENGTH = 128
 _TOKENIZER = None
 _MODEL = None
