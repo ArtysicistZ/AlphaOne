@@ -14,9 +14,9 @@ app = FastAPI(title="AlphaOne Inference API", version="1.0.0")
 
 @app.on_event("startup")
 def _debug_tokenizer():
-    """Log tokenizer handling of special tokens on startup."""
+    """Log tokenizer handling of entity replacement tokens on startup."""
     tokenizer, _ = _get_model()
-    for token in ["[TARGET]", "[OTHER]"]:
+    for token in ["target", "other"]:
         ids = tokenizer.encode(token, add_special_tokens=False)
         pieces = tokenizer.tokenize(token)
         logger.info("TOKENIZER DEBUG: %s -> ids=%s, pieces=%s", token, ids, pieces)
@@ -29,12 +29,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TARGET_TOKEN = "[TARGET]"
-OTHER_TOKEN = "[OTHER]"
+TARGET_TOKEN = "target"
+OTHER_TOKEN = "other"
 
 
 def _replace_targets(text: str, target: str, all_targets: list[str]) -> str:
-    """Replace the target word with [TARGET] and all other targets with [OTHER]."""
+    """Replace the target word with 'target' and all other targets with 'other' (SEntFiN-style)."""
     result = text
     # Replace longer targets first to avoid partial matches
     for t in sorted(all_targets, key=len, reverse=True):

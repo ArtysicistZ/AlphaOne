@@ -5,7 +5,7 @@ SENTENCE_TOPIC_MAP = {
     # words in entity replacement (train_finbert.py _TICKER_PATTERN).
     # Single-letter keys (V, C, T) match standalone letters; common-word
     # keys (SO, NOW, LOW, PM, ICE, HD, MA, COP, USB) match normal text.
-    # These create false [TARGET]/[OTHER] replacements that corrupt
+    # These create false target/other replacements that corrupt
     # training signal.  The removed tickers are rarely discussed by
     # ticker on Reddit anyway.
     #

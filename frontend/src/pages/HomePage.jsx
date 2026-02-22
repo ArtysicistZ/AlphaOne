@@ -97,13 +97,13 @@ function HomePage() {
               <div className="absa-demo-row">
                 <span className="absa-demo-target">target: AAPL</span>
                 <span className="absa-demo-arrow">&rarr;</span>
-                <code className="absa-demo-replaced">[TARGET] is great but [OTHER] is doomed</code>
+                <code className="absa-demo-replaced">target is great but other is doomed</code>
                 <span className="evidence-badge is-positive">BULLISH</span>
               </div>
               <div className="absa-demo-row">
                 <span className="absa-demo-target">target: TSLA</span>
                 <span className="absa-demo-arrow">&rarr;</span>
-                <code className="absa-demo-replaced">[OTHER] is great but [TARGET] is doomed</code>
+                <code className="absa-demo-replaced">other is great but target is doomed</code>
                 <span className="evidence-badge is-negative">BEARISH</span>
               </div>
             </div>

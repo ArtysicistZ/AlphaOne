@@ -17,7 +17,7 @@ def _get_model():
     if _TOKENIZER is None or _MODEL is None:
         logger.info("Loading sentiment model and tokenizer...")
         # DeBERTa-v3 fast tokenizer is broken — must use slow tokenizer
-        # to correctly handle [TARGET]/[OTHER] special tokens
+        # to correctly handle "target"/"other" entity replacement tokens
         _TOKENIZER = DebertaV2Tokenizer.from_pretrained(_MODEL_ID)
         _MODEL = AutoModelForSequenceClassification.from_pretrained(_MODEL_ID)
         _MODEL.eval()

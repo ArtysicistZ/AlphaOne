@@ -45,7 +45,7 @@ def main():
 
     # ── 2. Same stratified split as training (seed=42) ───────────────
     #    Use original texts (no entity replacement) since base model
-    #    doesn't know [TARGET]/[OTHER] tokens.
+    #    doesn't know target/other entity replacement.
     #    Train 90% / Test 10% — same split as train_finbert.py.
 
     train_texts, test_texts, train_labels, test_labels = train_test_split(

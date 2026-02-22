@@ -2,13 +2,22 @@
 Fine-tune a pre-trained transformer for subject-conditioned sentiment classification.
 
 Uses Entity Replacement approach (SEntFiN-style):
-  1. In normalized text, replace the target subject ticker with [TARGET]
-  2. Replace all other known stock tickers with [OTHER]
+  1. In normalized text, replace the target subject ticker with "target"
+  2. Replace all other known stock tickers with "other"
   3. Feed single-segment input: [CLS] modified_sentence [SEP]
+
+Using plain vocabulary words ("target"/"other") instead of special tokens
+([TARGET]/[OTHER]) means the model leverages pre-trained semantics from day one.
+"target" ≈ "the subject of focus", "other" ≈ "something else" — no embedding
+collapse risk.
 
 Example:
   text = "AAPL is great but TSLA is doomed", subject = "AAPL"
-  → input = "[TARGET] is great but [OTHER] is doomed"
+  → input = "target is great but other is doomed"
+
+Reference:
+  Sinha et al. (2022) "SEntFiN 1.0: Entity-Aware Sentiment Analysis for
+  Financial News" — achieved 94% accuracy with plain-word entity replacement.
 
 Default base model: cardiffnlp/twitter-roberta-base-sentiment-latest
   - RoBERTa-base further pre-trained on 58M tweets + fine-tuned for sentiment
@@ -36,10 +45,12 @@ Usage:
 """
 
 import argparse
+import csv
 import logging
 import os
 import re
-from collections import Counter
+from collections import Counter, defaultdict
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -56,8 +67,6 @@ from transformers import (
     EarlyStoppingCallback,
 )
 
-from app.database.session import init_db, SessionLocal
-from app.database.models import TrainingSentence, TrainingSentenceSubject
 from app.processing.sentiment_tagger.topic_definitions import SENTENCE_TOPIC_MAP
 from app.processing.sentiment_tagger.tagger_logic import _GENERAL_TOPICS
 
@@ -67,16 +76,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+DEFAULT_MODEL = "microsoft/deberta-v3-base"
 MAX_LENGTH = 128
 
 # bullish=0, bearish=1, neutral=2
 LABEL2ID = {"bullish": 0, "bearish": 1, "neutral": 2}
 ID2LABEL = {0: "bullish", 1: "bearish", 2: "neutral"}
 
-# Entity replacement tokens
-TARGET_TOKEN = "[TARGET]"
-OTHER_TOKEN = "[OTHER]"
+# Entity replacement tokens — plain vocabulary words (SEntFiN-style).
+# Using existing words instead of special tokens means the model starts
+# with meaningful pre-trained embeddings: "target" ≈ "the subject of focus",
+# "other" ≈ "something else".  This avoids the embedding collapse problem
+# where [TARGET] and [OTHER] initialized to the same mean vector never
+# diverge (cosine similarity 0.999987 after training).
+#
+# Reference: Sinha et al. (2022) "SEntFiN 1.0: Entity-Aware Sentiment
+# Analysis for Financial News" — achieved 94% accuracy with plain-word
+# entity replacement.
+TARGET_TOKEN = "target"
+OTHER_TOKEN = "other"
 
 # All stock tickers (exclude general topics — MACRO/TECHNOLOGY keywords
 # are NOT replaced in normalized text, so no entity replacement needed)
@@ -98,15 +116,15 @@ _TICKER_PATTERN = re.compile(
 
 def apply_entity_replacement(text: str, target_subject: str) -> str:
     """
-    Replace the target subject ticker with [TARGET] and all other known
-    stock tickers with [OTHER] in the normalized text.
+    Replace the target subject ticker with "target" and all other known
+    stock tickers with "other" in the normalized text.
 
     The normalized_text from the DB already has company names replaced with
     uppercase tickers (e.g., "apple" → "AAPL") by normalize_and_tag_sentence().
 
     Example:
         text="AAPL is great but TSLA is doomed", subject="AAPL"
-        → "[TARGET] is great but [OTHER] is doomed"
+        → "target is great but other is doomed"
     """
     def _replacer(match: re.Match) -> str:
         return TARGET_TOKEN if match.group() == target_subject else OTHER_TOKEN
@@ -137,67 +155,99 @@ class SentimentDataset(Dataset):
 
 
 class WeightedTrainer(Trainer):
-    """Trainer with class-weighted cross-entropy loss + label smoothing.
+    """Trainer with class-weighted CE loss + label smoothing + embedding divergence.
 
     Class weights address label imbalance (bullish ~13% vs neutral ~55%).
     Label smoothing prevents overconfidence in noisy LLM-generated labels.
+    Divergence loss pushes "target" and "other" embeddings apart so the
+    model learns to distinguish subject roles even better.
+
+    Reference:
+        Li et al. (2023) "Aspect-Pair Supervised Contrastive Learning for
+        ABSA" — contrastive/divergence losses improve aspect distinction.
     """
 
     def __init__(self, class_weights: torch.Tensor, label_smoothing: float = 0.0,
+                 target_token_id: int = -1, other_token_id: int = -1,
+                 divergence_weight: float = 0.0,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights
         self.label_smoothing = label_smoothing
+        self.target_token_id = target_token_id
+        self.other_token_id = other_token_id
+        self.divergence_weight = divergence_weight
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
-        loss = nn.CrossEntropyLoss(
+
+        cls_loss = nn.CrossEntropyLoss(
             weight=self.class_weights.to(logits.device),
             label_smoothing=self.label_smoothing,
         )(logits, labels)
+
+        # Divergence regularization: penalize high cosine similarity
+        # between "target" and "other" embeddings
+        if self.divergence_weight > 0 and self.target_token_id >= 0:
+            # Handle both regular models and LoRA-wrapped models
+            base = model.module if hasattr(model, "module") else model
+            if hasattr(base, "get_input_embeddings"):
+                emb_weight = base.get_input_embeddings().weight
+            else:
+                emb_weight = base.base_model.get_input_embeddings().weight
+
+            target_emb = emb_weight[self.target_token_id]
+            other_emb = emb_weight[self.other_token_id]
+
+            cos_sim = nn.functional.cosine_similarity(
+                target_emb.unsqueeze(0), other_emb.unsqueeze(0),
+            )
+            # Normalized to [0, 1]: 0 when orthogonal/opposite, 1 when identical
+            div_loss = (1.0 + cos_sim) / 2.0
+
+            loss = cls_loss + self.divergence_weight * div_loss.squeeze()
+        else:
+            loss = cls_loss
+
         return (loss, outputs) if return_outputs else loss
 
 
 # ── Data Loading ─────────────────────────────────────────────────────────
 
 
-def load_labeled_data() -> tuple[list[str], list[str], list[int]]:
-    """Load labeled (sentence, subject, label) triples from the training DB."""
-    init_db()
-    db = SessionLocal()
-    try:
-        rows = (
-            db.query(
-                TrainingSentence.normalized_text,
-                TrainingSentenceSubject.subject,
-                TrainingSentenceSubject.sentiment_label,
-            )
-            .join(
-                TrainingSentence,
-                TrainingSentenceSubject.sentence_id == TrainingSentence.id,
-            )
-            .filter(TrainingSentenceSubject.sentiment_label.isnot(None))
-            .all()
-        )
+DATA_DIR = Path(__file__).resolve().parent / "data" / "datasets"
+AUDITED_CSV = DATA_DIR / "audit_working.csv"
+SYNTHETIC_CSV = DATA_DIR / "synthetic_multitarget.csv"
 
-        texts = []
-        subjects = []
-        labels = []
-        skipped = 0
-        for text, subject, label in rows:
+
+def _load_csv(path: Path) -> tuple[list[str], list[str], list[int]]:
+    """Load (text, subject, label) triples from a CSV file."""
+    texts, subjects, labels = [], [], []
+    skipped = 0
+    with open(path, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            label = row["label"]
             if label not in LABEL2ID:
                 skipped += 1
                 continue
-            texts.append(text)
-            subjects.append(subject)
+            texts.append(row["text"])
+            subjects.append(row["subject"])
             labels.append(LABEL2ID[label])
+    logger.info("Loaded %d rows from %s (%d skipped)", len(texts), path.name, skipped)
+    return texts, subjects, labels
 
-        logger.info("Loaded %d labeled pairs (%d skipped)", len(texts), skipped)
-        return texts, subjects, labels
-    finally:
-        db.close()
+
+def load_labeled_data() -> tuple[list[str], list[str], list[int]]:
+    """Load hand-audited labeled data from audit_working.csv."""
+    return _load_csv(AUDITED_CSV)
+
+
+def load_synthetic_multitarget() -> tuple[list[str], list[str], list[int]]:
+    """Load synthetic multi-target sentences from synthetic_multitarget.csv."""
+    return _load_csv(SYNTHETIC_CSV)
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────
@@ -228,6 +278,11 @@ def compute_metrics(eval_pred: EvalPrediction) -> dict:
         f1_scores.append(f1)
 
     metrics["macro_f1"] = sum(f1_scores) / len(f1_scores)
+
+    # Balanced accuracy: average of per-class recalls (each class weighted equally)
+    recalls = [metrics[f"recall_{name}"] for name in ID2LABEL.values()]
+    metrics["balanced_accuracy"] = sum(recalls) / len(recalls)
+
     return metrics
 
 
@@ -237,7 +292,7 @@ def compute_metrics(eval_pred: EvalPrediction) -> dict:
 def freeze_encoder_layers(model, num_layers: int):
     """Freeze the bottom N encoder layers of the transformer.
 
-    Leaves embeddings trainable (needed for [TARGET]/[OTHER] special tokens).
+    Leaves embeddings trainable (needed for "target"/"other" fine-tuning).
     Leaves top encoder layers + classifier head trainable.
     Works with BERT, RoBERTa, DeBERTa, etc. via base_model_prefix.
     """
@@ -259,25 +314,6 @@ def freeze_encoder_layers(model, num_layers: int):
     )
 
 
-# ── Special Token Init ──────────────────────────────────────────────────
-
-
-def init_special_token_embeddings(model, num_new_tokens: int):
-    """Initialize new special token embeddings to mean of existing embeddings.
-
-    Better than random init — gives a neutral starting point instead of noise.
-    Critical when training data is small (<5K samples).
-    """
-    if num_new_tokens == 0:
-        return
-    with torch.no_grad():
-        embeddings = model.get_input_embeddings()
-        existing_mean = embeddings.weight[:-num_new_tokens].mean(dim=0)
-        for i in range(num_new_tokens):
-            embeddings.weight[-(i + 1)] = existing_mean
-    logger.info("Initialized %d special tokens to mean embedding", num_new_tokens)
-
-
 # ── LoRA ─────────────────────────────────────────────────────────────
 
 
@@ -290,7 +326,7 @@ def apply_lora(model, tokenizer, rank: int = 8, alpha: int = 16, dropout: float 
     Trainable components:
       - LoRA adapters on Q/K/V attention (12 layers): ~442K params
       - Classifier head (dense 768×768 + out_proj 768×3): ~593K params
-      - [TARGET]/[OTHER] token embeddings only: ~1.5K params
+      - "target"/"other" token embeddings only: ~1.5K params
         (via trainable_token_indices — NOT the full 38.6M embedding matrix)
 
     References:
@@ -303,11 +339,16 @@ def apply_lora(model, tokenizer, rank: int = 8, alpha: int = 16, dropout: float 
     # These names work for both BERT (query/key/value) and RoBERTa.
     target_modules = ["query", "key", "value"]
 
-    # Get token IDs for [TARGET] and [OTHER] so we can train ONLY those
-    # embeddings (1,536 params) instead of the full embedding matrix (38.6M).
+    # Get token IDs for "target" and "other" so we can fine-tune ONLY those
+    # embeddings instead of the full embedding matrix (38.6M).
+    # These are existing vocabulary words — no need to add special tokens.
     # Requires peft >= 0.15.0.
-    special_token_ids = tokenizer.convert_tokens_to_ids(
-        [TARGET_TOKEN, OTHER_TOKEN]
+    target_token_ids = tokenizer.encode(TARGET_TOKEN, add_special_tokens=False)
+    other_token_ids = tokenizer.encode(OTHER_TOKEN, add_special_tokens=False)
+    trainable_ids = target_token_ids + other_token_ids
+    logger.info(
+        "Trainable token indices: target=%s, other=%s",
+        target_token_ids, other_token_ids,
     )
 
     lora_config = LoraConfig(
@@ -318,7 +359,7 @@ def apply_lora(model, tokenizer, rank: int = 8, alpha: int = 16, dropout: float 
         target_modules=target_modules,
         modules_to_save=["classifier"],
         bias="none",
-        trainable_token_indices=special_token_ids,
+        trainable_token_indices=trainable_ids,
     )
 
     model = get_peft_model(model, lora_config)
@@ -342,31 +383,35 @@ def main():
     )
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL,
                         help=f"HuggingFace model name (default: {DEFAULT_MODEL})")
-    parser.add_argument("--epochs", type=int, default=6,
-                        help="Max training epochs (default: 6, early stopping may end sooner)")
-    parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=2e-4,
-                        help="Learning rate (default: 2e-4, tuned for LoRA)")
+    parser.add_argument("--epochs", type=int, default=8,
+                        help="Max training epochs (default: 8, early stopping may end sooner)")
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--lr", type=float, default=2e-5,
+                        help="Learning rate (default: 2e-5, tuned for full fine-tuning)")
     parser.add_argument("--max-length", type=int, default=MAX_LENGTH)
-    parser.add_argument("--lora", dest="lora", action="store_true", default=True,
-                        help="Use LoRA fine-tuning (default: enabled)")
+    parser.add_argument("--lora", dest="lora", action="store_true", default=False,
+                        help="Use LoRA fine-tuning (default: disabled)")
     parser.add_argument("--no-lora", dest="lora", action="store_false",
-                        help="Disable LoRA, use full fine-tuning with layer freezing")
+                        help="Full fine-tuning with layer freezing (default)")
     parser.add_argument("--lora-rank", type=int, default=8,
                         help="LoRA rank (default: 8). Higher = more params, more capacity")
     parser.add_argument("--lora-alpha", type=int, default=16,
                         help="LoRA alpha scaling (default: 16, typically 2x rank)")
     parser.add_argument("--lora-dropout", type=float, default=0.1,
                         help="LoRA dropout (default: 0.1)")
-    parser.add_argument("--freeze-layers", type=int, default=8,
-                        help="Freeze bottom N encoder layers when --no-lora (0=none, default=8)")
+    parser.add_argument("--freeze-layers", type=int, default=0,
+                        help="Freeze bottom N encoder layers when --no-lora (0=none, default=0)")
     parser.add_argument("--label-smoothing", type=float, default=0.1,
                         help="Label smoothing for noisy LLM labels (0=none, default=0.1)")
+    parser.add_argument("--divergence-weight", type=float, default=0.1,
+                        help="Weight for target/other embedding divergence loss (0=disabled, default=0.1)")
     parser.add_argument("--patience", type=int, default=2,
                         help="Early stopping patience in epochs (0=disabled, default=2)")
     parser.add_argument(
-        "--output-dir", type=str, default="./ml/models/finbert-sentiment"
+        "--output-dir", type=str, default="./ml/models/deberta-v3-sentiment"
     )
+    parser.add_argument("--no-synthetic", action="store_true",
+                        help="Disable synthetic multi-target data (default: enabled)")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -380,6 +425,7 @@ def main():
     print(f"Batch size:       {args.batch_size}")
     print(f"Learning rate:    {args.lr}")
     print(f"Label smoothing:  {args.label_smoothing}")
+    print(f"Divergence wt:    {args.divergence_weight}")
     print(f"Device:           {'CUDA' if torch.cuda.is_available() else 'CPU'}")
     print()
 
@@ -389,6 +435,18 @@ def main():
     if len(texts) == 0:
         print("ERROR: No labeled data found. Run llm_labeler first.")
         return
+
+    print(f"Database:         {len(texts)} labeled pairs")
+
+    # Merge synthetic multi-target sentences (unless --no-synthetic)
+    if not args.no_synthetic:
+        syn_texts, syn_subjects, syn_labels = load_synthetic_multitarget()
+        texts.extend(syn_texts)
+        subjects.extend(syn_subjects)
+        labels.extend(syn_labels)
+        print(f"Synthetic:        {len(syn_texts)} multi-target pairs")
+        print(f"Combined:         {len(texts)} total pairs")
+    print()
 
     # ── 2. Apply entity replacement ──────────────────────────────────
 
@@ -424,19 +482,46 @@ def main():
         print(f"  {ID2LABEL[label_id]}: {weights[label_id]:.3f}")
     print()
 
-    # ── 3. Stratified split: train 90% / test 10% ─────────────────
-    #    No separate val set — test set is used for eval during training.
-    #    Maximizes training data for small datasets (~4.8K samples).
+    # ── 3. Sentence-level stratified split: train 90% / test 10% ──
+    #    Multi-target sentences produce multiple (text, subject) pairs.
+    #    Splitting naively on pairs would leak the same sentence text into
+    #    both train and test.  Instead, split on *unique sentences* first,
+    #    then expand back to individual pairs.
 
-    train_texts, test_texts, train_labels, test_labels = train_test_split(
-        modified_texts, labels,
-        test_size=0.1, random_state=args.seed, stratify=labels,
+    # Group indices by original sentence text (before entity replacement)
+    sentence_groups: dict[str, list[int]] = defaultdict(list)
+    for idx, txt in enumerate(texts):
+        sentence_groups[txt].append(idx)
+
+    unique_sentences = list(sentence_groups.keys())
+    # Use the label of the first pair in each group for stratification
+    unique_labels = [labels[sentence_groups[s][0]] for s in unique_sentences]
+
+    train_sents, test_sents = train_test_split(
+        unique_sentences,
+        test_size=0.1, random_state=args.seed, stratify=unique_labels,
     )
+    train_sent_set = set(train_sents)
 
-    print(f"Train: {len(train_texts)}, Test: {len(test_texts)}")
+    train_texts, train_labels = [], []
+    test_texts, test_labels = [], []
+    for sent, indices in sentence_groups.items():
+        for idx in indices:
+            if sent in train_sent_set:
+                train_texts.append(modified_texts[idx])
+                train_labels.append(labels[idx])
+            else:
+                test_texts.append(modified_texts[idx])
+                test_labels.append(labels[idx])
+
+    print(f"Unique sentences: {len(unique_sentences)} "
+          f"(train {len(train_sents)}, test {len(test_sents)})")
+    print(f"Expanded pairs:   train {len(train_texts)}, test {len(test_texts)}")
     print()
 
-    # ── 4. Load tokenizer and add special tokens ─────────────────────
+    # ── 4. Load tokenizer ────────────────────────────────────────────
+    #    No special tokens needed — "target" and "other" are plain vocabulary
+    #    words with meaningful pre-trained embeddings (SEntFiN-style approach).
 
     print("Loading tokenizer...")
     # DeBERTa-v3 fast tokenizer conversion is broken; load slow tokenizer directly
@@ -446,12 +531,10 @@ def main():
     else:
         tokenizer = AutoTokenizer.from_pretrained(args.model)
 
-    num_added = tokenizer.add_special_tokens({
-        "additional_special_tokens": [TARGET_TOKEN, OTHER_TOKEN],
-    })
-    logger.info("Added %d special tokens (vocab: %d)", num_added, len(tokenizer))
+    logger.info("Tokenizer vocab size: %d", len(tokenizer))
 
-    # ── 5. Load model, resize embeddings, apply LoRA or freeze layers ─
+    # ── 5. Load model, apply LoRA or freeze layers ────────────────────
+    #    No resize_token_embeddings needed — vocabulary is unchanged.
 
     print("Loading model...")
     model = AutoModelForSequenceClassification.from_pretrained(
@@ -459,10 +542,6 @@ def main():
         num_labels=3,
         ignore_mismatched_sizes=True,
     )
-    model.resize_token_embeddings(len(tokenizer))
-
-    # Initialize [TARGET]/[OTHER] to mean embedding instead of random noise
-    init_special_token_embeddings(model, num_added)
 
     # Update label mapping
     model.config.id2label = ID2LABEL
@@ -525,9 +604,20 @@ def main():
     if args.patience > 0:
         callbacks.append(EarlyStoppingCallback(early_stopping_patience=args.patience))
 
+    # Get token IDs for divergence loss (plain vocabulary words)
+    target_ids = tokenizer.encode(TARGET_TOKEN, add_special_tokens=False)
+    other_ids = tokenizer.encode(OTHER_TOKEN, add_special_tokens=False)
+    # Use first subword token for divergence loss (both are common single-token words)
+    target_id = target_ids[0]
+    other_id = other_ids[0]
+    logger.info("Divergence loss token IDs: target=%d, other=%d", target_id, other_id)
+
     trainer = WeightedTrainer(
         class_weights=class_weights,
         label_smoothing=args.label_smoothing,
+        target_token_id=target_id,
+        other_token_id=other_id,
+        divergence_weight=args.divergence_weight,
         model=model,
         args=training_args,
         train_dataset=train_dataset,
