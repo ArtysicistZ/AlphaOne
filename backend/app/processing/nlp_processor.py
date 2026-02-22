@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification, DebertaV2Tokenizer
 import torch
 import numpy as np
 import os
@@ -16,7 +16,9 @@ def _get_model():
     global _TOKENIZER, _MODEL
     if _TOKENIZER is None or _MODEL is None:
         logger.info("Loading sentiment model and tokenizer...")
-        _TOKENIZER = AutoTokenizer.from_pretrained(_MODEL_ID)
+        # DeBERTa-v3 fast tokenizer is broken — must use slow tokenizer
+        # to correctly handle [TARGET]/[OTHER] special tokens
+        _TOKENIZER = DebertaV2Tokenizer.from_pretrained(_MODEL_ID)
         _MODEL = AutoModelForSequenceClassification.from_pretrained(_MODEL_ID)
         _MODEL.eval()
     return _TOKENIZER, _MODEL
