@@ -41,6 +41,8 @@ services:
       - redis
     env_file:
       - ./.env
+    volumes:
+      - hf-cache:/home/appuser/.cache/huggingface
     restart: unless-stopped
 
   inference-api:
@@ -54,3 +56,8 @@ services:
       - PYTHONPATH=/app
     env_file:
       - ./.env
+    volumes:
+      - hf-cache:/home/appuser/.cache/huggingface
+
+volumes:
+  hf-cache:

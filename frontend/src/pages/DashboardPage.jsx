@@ -1,29 +1,49 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getTrackedAssets } from '../api/sentimentApi';
+import SentimentChart from '../components/SentimentChart';
+import { getTrackedAssets, getMacroDailyChart, getMacroSummary } from '../api/sentimentApi';
+
+const formatScore = (score) => {
+  const parsed = Number(score);
+  if (!Number.isFinite(parsed)) return '0.000';
+  return parsed > 0 ? `+${parsed.toFixed(3)}` : parsed.toFixed(3);
+};
 
 function DashboardPage() {
   const [assets, setAssets] = useState([]);
+  const [macroChart, setMacroChart] = useState([]);
+  const [macroScore, setMacroScore] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        const data = await getTrackedAssets();
-        setAssets(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error('Error fetching assets:', error);
-        setError('Failed to load tracked assets.');
-      } finally {
-        setLoading(false);
+    const fetchData = async () => {
+      const [assetRes, chartRes, summaryRes] = await Promise.allSettled([
+        getTrackedAssets(),
+        getMacroDailyChart(),
+        getMacroSummary(),
+      ]);
+
+      if (assetRes.status === 'fulfilled') {
+        setAssets(Array.isArray(assetRes.value) ? assetRes.value : []);
       }
+      if (chartRes.status === 'fulfilled' && Array.isArray(chartRes.value)) {
+        setMacroChart(chartRes.value);
+      }
+      if (summaryRes.status === 'fulfilled') {
+        const avg = Number(summaryRes.value?.averageScore);
+        setMacroScore(Number.isFinite(avg) ? avg : 0);
+      }
+
+      if (assetRes.status === 'rejected' || chartRes.status === 'rejected') {
+        setError('Some dashboard data could not be loaded.');
+      }
+
+      setLoading(false);
     };
 
-    fetchAssets();
+    fetchData();
   }, []);
-
-  const topAssets = useMemo(() => assets.slice(0, 8), [assets]);
 
   return (
     <div className="dashboard-page">
@@ -62,22 +82,20 @@ function DashboardPage() {
         <section className="dashboard-assets panel">
           <div className="panel-head">
             <div>
-              <h2>Tracked Universe</h2>
-              <p>Assets currently tagged and available for search and detail view.</p>
+              <h2>Macro Sentiment Trend</h2>
+              <p>Daily average sentiment aggregated across all {assets.length} tracked assets.</p>
             </div>
+            <span className={`tone-pill ${macroScore > 0.05 ? 'is-positive' : macroScore < -0.05 ? 'is-negative' : 'is-neutral'}`}>
+              {formatScore(macroScore)}
+            </span>
           </div>
 
-          {loading ? <p className="loading-note">Loading tracked assets...</p> : null}
+          {loading ? <p className="loading-note">Loading macro sentiment...</p> : null}
           {error ? <p className="inline-alert">{error}</p> : null}
 
           {!loading && !error ? (
-            <div className="asset-grid">
-              {topAssets.map((asset) => (
-                <article key={asset.id} className="asset-card">
-                  <h3>{asset.slug}</h3>
-                  <p>Monitored for social sentiment and topic scoring.</p>
-                </article>
-              ))}
+            <div className="chart-shell">
+              <SentimentChart data={macroChart} ticker="ALL" />
             </div>
           ) : null}
         </section>

@@ -22,9 +22,14 @@ export const getTopicSummary = async (topicSlug) => {
   return response.data; // Returns { day: "...", average_score: 0.123 }
 };
 
-export const getWordCloudData = async () => {
-  const response = await apiClient.get('/signals/social-sentiment/wordcloud');
-  return response.data; // Returns [{ text: "word", value: 10 }, ...]
+export const getMacroSummary = async () => {
+  const response = await apiClient.get('/signals/social-sentiment/macro/summary');
+  return response.data;
+};
+
+export const getMacroDailyChart = async () => {
+  const response = await apiClient.get('/signals/social-sentiment/macro/daily');
+  return response.data;
 };
 
 export const runInference = async (text, targets) => {

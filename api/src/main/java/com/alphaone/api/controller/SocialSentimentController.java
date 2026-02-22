@@ -11,10 +11,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import com.alphaone.domain.service.SentimentDataService;
-import com.alphaone.domain.service.WordFrequencyService;
 import com.alphaone.api.dto.DailySentimentDto;
 import com.alphaone.api.dto.SentimentDataDto;
-import com.alphaone.api.dto.WordCloudItemDto;
 
 
 @RestController
@@ -22,16 +20,11 @@ import com.alphaone.api.dto.WordCloudItemDto;
 public class SocialSentimentController {
     
     private final SentimentDataService sentimentDataService;
-    private final WordFrequencyService wordFrequencyService;
 
     private static final Logger logger = LoggerFactory.getLogger(SocialSentimentController.class);
 
-    public SocialSentimentController(
-        SentimentDataService sentimentDataService,
-        WordFrequencyService wordFrequencyService
-    ) {
+    public SocialSentimentController(SentimentDataService sentimentDataService) {
         this.sentimentDataService = sentimentDataService;
-        this.wordFrequencyService = wordFrequencyService;
     }
 
     @GetMapping("/{ticker}/evidence")
@@ -44,6 +37,22 @@ public class SocialSentimentController {
         return result;
     }
 
+    @GetMapping("/macro/summary")
+    public DailySentimentDto getMacroSummary() {
+        logger.info("api.social.macro.summary.request");
+        DailySentimentDto result = sentimentDataService.getMacroSummary();
+        logger.info("api.social.macro.summary.response avg={}", result.averageScore());
+        return result;
+    }
+
+    @GetMapping("/macro/daily")
+    public List<DailySentimentDto> getMacroDailyChart() {
+        logger.info("api.social.macro.daily.request");
+        List<DailySentimentDto> result = sentimentDataService.getMacroDailyChart();
+        logger.info("api.social.macro.daily.response count={}", result.size());
+        return result;
+    }
+
     @GetMapping("/summary/{topicSlug}")
     public DailySentimentDto getTopicSummary(
         @PathVariable String topicSlug
@@ -51,14 +60,6 @@ public class SocialSentimentController {
         logger.info("api.social.summary.request topicSlug={}", topicSlug);
         DailySentimentDto result = sentimentDataService.getTopicSummary(topicSlug);
         logger.info("api.social.summary.response topicSlug={}", topicSlug);
-        return result;
-    }
-
-    @GetMapping("/wordcloud")
-    public List<WordCloudItemDto> getWordCloud() {
-        logger.info("api.social.wordcloud.request");
-        List<WordCloudItemDto> result = wordFrequencyService.getWordCloudItems();
-        logger.info("api.social.wordcloud.response count={}", result.size());
         return result;
     }
 

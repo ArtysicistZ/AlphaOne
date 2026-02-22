@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom';
 const SERVICES = [
   {
     title: 'React Frontend',
-    tech: 'React 18, Vite, Chart.js, react-d3-cloud',
+    tech: 'React 18, Vite, Chart.js',
     description:
-      'Single-page dashboard with sentiment trend charts, per-ticker evidence feeds, word clouds, and an interactive model playground.',
+      'Single-page dashboard with sentiment trend charts, per-ticker evidence feeds, and an interactive model playground.',
   },
   {
     title: 'Spring Boot API',
@@ -415,11 +415,6 @@ const ArchitecturePage = () => {
                   <td><code>GET</code></td>
                   <td><code>/api/v1/signals/social-sentiment/summary/&#123;topicSlug&#125;</code></td>
                   <td>Summary stats for a topic</td>
-                </tr>
-                <tr>
-                  <td><code>GET</code></td>
-                  <td><code>/api/v1/signals/social-sentiment/wordcloud</code></td>
-                  <td>Word frequency data for word cloud</td>
                 </tr>
                 <tr>
                   <td><code>POST</code></td>

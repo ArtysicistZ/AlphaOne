@@ -14,7 +14,7 @@ function HomePage() {
     },
     {
       title: 'Actionable Visuals',
-      description: 'Turn noisy sentiment flow into trend charts, keyword clouds, and evidence-level explanations.',
+      description: 'Turn noisy sentiment flow into trend charts and evidence-level explanations.',
     },
   ];
 

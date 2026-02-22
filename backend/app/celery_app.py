@@ -5,6 +5,7 @@ import uuid
 
 from datetime import timedelta
 from celery import Celery
+from celery.signals import worker_ready
 
 from app.orchestration.pipeline_service import run_pipeline_once
 from app.settings import REDDIT_SUBREDDITS, REDDIT_FETCH_LIMIT, BATCH_PROCESS_LIMIT
@@ -25,6 +26,13 @@ app.conf.beat_schedule = {
 }
 app.conf.timezone = "UTC"
 app.conf.broker_connection_retry_on_startup = True
+
+
+@worker_ready.connect
+def run_on_startup(**kwargs):
+    """Fire the pipeline once immediately when the worker starts."""
+    logger.info("worker_ready: dispatching initial run_batch")
+    run_batch.delay()
 
 
 @app.task(

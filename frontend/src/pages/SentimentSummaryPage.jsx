@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import WordCloud from 'react-d3-cloud';
+import React, { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import SentimentChart from '../components/SentimentChart';
 import EvidenceList from '../components/EvidenceList';
 import {
-  getWordCloudData,
   getTopicSummary,
+  getMacroSummary,
   getSentimentEvidence,
   getTrackedAssets,
   getSentimentForTickerChart,
@@ -44,34 +43,15 @@ function SentimentSummaryPage() {
   const [searchTicker, setSearchTicker] = useState('');
 
   const [macroScore, setMacroScore] = useState(0);
-  const [techScore, setTechScore] = useState(0);
   const [assetScore, setAssetScore] = useState(0);
 
-  const [wordCloudData, setWordCloudData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [evidence, setEvidence] = useState([]);
 
-  const [cloudWidth, setCloudWidth] = useState(540);
   const [isBootLoading, setIsBootLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [bootError, setBootError] = useState('');
   const [detailError, setDetailError] = useState('');
-
-  useEffect(() => {
-    const updateCloudWidth = () => {
-      if (window.innerWidth < 640) {
-        setCloudWidth(300);
-      } else if (window.innerWidth < 900) {
-        setCloudWidth(420);
-      } else {
-        setCloudWidth(540);
-      }
-    };
-
-    updateCloudWidth();
-    window.addEventListener('resize', updateCloudWidth);
-    return () => window.removeEventListener('resize', updateCloudWidth);
-  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -80,11 +60,9 @@ function SentimentSummaryPage() {
       setIsBootLoading(true);
       setBootError('');
 
-      const [assetRes, macroRes, techRes, cloudRes] = await Promise.allSettled([
+      const [assetRes, macroRes] = await Promise.allSettled([
         getTrackedAssets(),
-        getTopicSummary('MACRO'),
-        getTopicSummary('TECHNOLOGY'),
-        getWordCloudData(),
+        getMacroSummary(),
       ]);
 
       if (!isActive) return;
@@ -96,26 +74,13 @@ function SentimentSummaryPage() {
         setMacroScore(getScore(macroRes.value?.averageScore));
       }
 
-      if (techRes.status === 'fulfilled') {
-        setTechScore(getScore(techRes.value?.averageScore));
-      }
-
-      if (cloudRes.status === 'fulfilled' && Array.isArray(cloudRes.value)) {
-        setWordCloudData(cloudRes.value);
-      }
-
       if (nextAssets.length > 0) {
         const firstAsset = nextAssets[0].slug;
         setSelectedAsset(firstAsset);
         setSearchTicker(firstAsset);
       }
 
-      if (
-        assetRes.status === 'rejected' ||
-        macroRes.status === 'rejected' ||
-        techRes.status === 'rejected' ||
-        cloudRes.status === 'rejected'
-      ) {
+      if (assetRes.status === 'rejected' || macroRes.status === 'rejected') {
         setBootError('Some global metrics are temporarily unavailable.');
       }
 
@@ -205,24 +170,6 @@ function SentimentSummaryPage() {
     setSearchTicker(assetSlug);
   };
 
-  const [minFreq, maxFreq] = useMemo(() => {
-    if (wordCloudData.length === 0) {
-      return [0, 0];
-    }
-
-    const values = wordCloudData.map((word) => Number(word.value));
-    return [Math.min(...values), Math.max(...values)];
-  }, [wordCloudData]);
-
-  const wordCloudFontSize = (word) => {
-    const value = Number(word.value);
-    if (maxFreq === minFreq) {
-      return 36;
-    }
-
-    const normalized = (value - minFreq) / (maxFreq - minFreq);
-    return normalized * 56 + 16;
-  };
 
   return (
     <div className="sentiment-page">
@@ -258,10 +205,9 @@ function SentimentSummaryPage() {
 
         {bootError ? <p className="inline-alert">{bootError}</p> : null}
 
-        <section className="summary-grid">
+        <section className="summary-grid summary-grid--two">
           <SummaryCard title="Selected Asset" score={assetScore} subtitle={selectedAsset || 'No asset selected'} />
-          <SummaryCard title="Macro Sentiment" score={macroScore} subtitle="Cross-market narrative pressure" />
-          <SummaryCard title="Technology Sentiment" score={techScore} subtitle="Sector-wide signal direction" />
+          <SummaryCard title="Macro Sentiment" score={macroScore} subtitle="Aggregated across all tracked assets" />
         </section>
 
         {isBootLoading ? (
@@ -291,48 +237,20 @@ function SentimentSummaryPage() {
 
               {detailError ? <p className="inline-alert">{detailError}</p> : null}
 
-              <div className="sentiment-lower">
-                <article className="word-cloud-panel panel">
-                  <div className="panel-head">
-                    <div>
-                      <h2>Keyword Pressure</h2>
-                      <p>Most repeated words from today's sentiment stream.</p>
-                    </div>
+              <article className="evidence-panel panel">
+                <div className="panel-head">
+                  <div>
+                    <h2>Evidence Feed</h2>
+                    <p>Sentence-level mentions used for model scoring.</p>
                   </div>
+                </div>
 
-                  <div className="word-cloud-shell">
-                    {wordCloudData.length > 0 ? (
-                      <WordCloud
-                        data={wordCloudData}
-                        width={cloudWidth}
-                        height={280}
-                        font="Space Grotesk"
-                        fontSize={wordCloudFontSize}
-                        rotate={0}
-                        spiral="archimedean"
-                        padding={2}
-                      />
-                    ) : (
-                      <p className="loading-note">No keyword cloud data available.</p>
-                    )}
-                  </div>
-                </article>
-
-                <article className="evidence-panel panel">
-                  <div className="panel-head">
-                    <div>
-                      <h2>Evidence Feed</h2>
-                      <p>Sentence-level mentions used for model scoring.</p>
-                    </div>
-                  </div>
-
-                  {isDetailLoading ? (
-                    <p className="loading-note">Loading evidence feed...</p>
-                  ) : (
-                    <EvidenceList evidence={evidence} />
-                  )}
-                </article>
-              </div>
+                {isDetailLoading ? (
+                  <p className="loading-note">Loading evidence feed...</p>
+                ) : (
+                  <EvidenceList evidence={evidence} />
+                )}
+              </article>
             </div>
           </section>
         )}

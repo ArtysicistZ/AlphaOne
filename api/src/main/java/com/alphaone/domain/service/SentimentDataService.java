@@ -50,6 +50,40 @@ public class SentimentDataService {
     }
 
 
+    public DailySentimentDto getMacroSummary() {
+        List<SentimentData> all = sentimentDataRepository.findAll();
+
+        double avg = all.stream()
+            .map(SentimentData::getSentimentScore)
+            .filter(java.util.Objects::nonNull)
+            .mapToDouble(Double::doubleValue)
+            .average()
+            .orElse(0.0);
+
+        return new DailySentimentDto(java.time.LocalDate.now(), avg);
+    }
+
+
+    public List<DailySentimentDto> getMacroDailyChart() {
+        List<SentimentData> all = sentimentDataRepository.findAll();
+
+        Map<java.time.LocalDate, DoubleSummaryStatistics> grouped =
+            all.stream()
+                .filter(data -> data.getCreatedAt() != null && data.getSentimentScore() != null)
+                .collect(
+                    Collectors.groupingBy(
+                        data -> data.getCreatedAt().toLocalDate(),
+                        TreeMap::new,
+                        Collectors.summarizingDouble(SentimentData::getSentimentScore)
+                    )
+                );
+
+        return grouped.entrySet().stream()
+            .map(entry -> new DailySentimentDto(entry.getKey(), entry.getValue().getAverage()))
+            .toList();
+    }
+
+
     public DailySentimentDto getTopicSummary(String topicSlug) {
         Topic topic = 
             topicRepository
