@@ -9,7 +9,7 @@
   <img alt="ML" src="https://img.shields.io/badge/ML-PyTorch%20%2B%20Transformers-orange" />
 </p>
 <p align="center">
-  Real-time stock sentiment tracker powered by Reddit and a fine-tuned DeBERTa-v3 ABSA model, achieving <b>0.823 macro F1</b> on 3-class entity-level sentiment from informal social media text.
+  Real-time stock sentiment tracker powered by Reddit and a fine-tuned DeBERTa-v3 ABSA model, achieving <b>82.5% accuracy</b> on 3-class entity-level sentiment from <b>informal social media text</b>.
 </p>
 
 
@@ -84,7 +84,7 @@ We use plain vocabulary words (`target`/`other`) instead of special tokens (`[TA
 
 **Training data:** 6,287 hand-audited (sentence, stock, label) triples from Reddit posts, synthetic multi-target pairs, and error-targeted synthetic pairs reverse-engineered from model error analysis.
 
-**Production model:** [`ArtysicistZ/absa-deberta`](https://huggingface.co/ArtysicistZ/absa-deberta) on Hugging Face, downloaded automatically at runtime.
+**Production model:** [`ArtysicistZ/deberta-absa-v2`](https://huggingface.co/ArtysicistZ/deberta-absa-v2) on Hugging Face, downloaded automatically at runtime.
 
 ### Results
 
@@ -103,7 +103,7 @@ Improved from **0.703 to 0.823 macro F1** across 9 training iterations through a
 | **AlphaOne (DeBERTa-v3)** | **Reddit (informal)** | **0.823** |
 | [FinEntity](https://arxiv.org/abs/2310.12406) (ChatGPT 0-shot) | Formal financial news | 0.560 |
 
-Our 0.823 on Reddit text (sarcasm, slang, implicit sentiment) is within 3pp of formal-news SOTA. See [`docs/FINBERT_FINETUNING_DESIGN.md`](docs/FINBERT_FINETUNING_DESIGN.md) for full ablation history and benchmark analysis.
+Our 0.823 on Reddit text <b>(sarcasm, slang, implicit sentiment)</b> is within 3pp of formal-news SOTA. See [`docs/FINBERT_FINETUNING_DESIGN.md`](docs/FINBERT_FINETUNING_DESIGN.md) for full ablation history and benchmark analysis.
 
 
 ## Tech Stack
