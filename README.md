@@ -94,7 +94,7 @@ We use plain vocabulary words (`target`/`other`) instead of special tokens (`[TA
 | **Accuracy** | **82.5%** |
 | Bullish / Bearish / Neutral F1 | 0.836 / 0.800 / 0.833 |
 
-Improved from **0.703 to 0.823 macro F1** across 9 training iterations through architecture changes (FinBERT to DeBERTa-v3 + entity replacement), manual audit of 4,501 labels (~615 corrections), and 302 error-targeted synthetic pairs (+5.6pp from just 5% more data).
+Improved from **0.703 to 0.823 macro F1** across 9 training iterations through architecture changes (FinBERT to DeBERTa-v3 + entity replacement), manual audit of 4,501 labels (~615 corrections), and 302 error-targeted synthetic pairs.
 
 | System | Domain | Macro F1 |
 |--------|--------|:--------:|
