@@ -10,7 +10,7 @@ function HomePage() {
     {
       title: 'Subject-Aware NLP',
       description:
-        'Score sentiment per stock using a fine-tuned DeBERTa-v3 ABSA model with entity replacement — one sentence, multiple verdicts.',
+        'Score sentiment per stock using our fine-tuned DeBERTa-absa-v2 model with entity replacement, one sentence, multiple verdicts.',
     },
     {
       title: 'Actionable Visuals',
@@ -73,14 +73,14 @@ function HomePage() {
               &ldquo;AAPL is great but TSLA is doomed&rdquo;, the sentiment is different for each
               stock. Our fine-tuned{' '}
               <a
-                href="https://huggingface.co/ArtysicistZ/absa-deberta"
+                href="https://huggingface.co/ArtysicistZ/deberta-absa-v2"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="absa-link"
               >
-                DeBERTa-v3 ABSA model
+                DeBERTa-ABSA-v2
               </a>{' '}
-              solves this using <strong>entity replacement</strong> &mdash; classifying sentiment
+              solves this using <strong>entity replacement</strong>, classifying sentiment
               toward each stock independently.
             </p>
             <Link to="/playground" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
@@ -121,15 +121,15 @@ function HomePage() {
 
         <section className="metric-strip panel">
           <div className="metric-block">
-            <span className="metric-value">DeBERTa-v3</span>
-            <span className="metric-label">Fine-tuned ABSA model</span>
+            <span className="metric-value">DeBERTa-ABSA-v2</span>
+            <span className="metric-label">Fine-tuned sentiment model</span>
           </div>
           <div className="metric-block">
             <span className="metric-value">Per-subject</span>
             <span className="metric-label">Sentiment granularity</span>
           </div>
           <div className="metric-block">
-            <span className="metric-value">79.4%</span>
+            <span className="metric-value">82.5%</span>
             <span className="metric-label">Accuracy (3-class)</span>
           </div>
         </section>

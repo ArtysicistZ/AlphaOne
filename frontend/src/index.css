@@ -721,25 +721,127 @@ input {
   line-height: 1.45;
 }
 
-.architecture-flow {
-  margin-top: 1rem;
-  padding: 1rem;
+/* ---- Horizontal Flow Diagram ---- */
+
+.hflow-wrap {
+  position: relative;
+  padding: 1.5rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.pipeline-diagram {
-  margin: 0;
-  padding: 1rem;
+.hflow-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin-bottom: 0.55rem;
+  margin-top: 1.2rem;
+  align-self: flex-start;
+}
+
+.hflow-label:first-child {
+  margin-top: 0;
+}
+
+.hflow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.hflow-node {
+  flex-shrink: 0;
+  padding: 0.6rem 0.85rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
-  color: var(--ink-0);
-  line-height: 1.45;
-  font-size: 0.84rem;
-  overflow-x: auto;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  text-align: center;
+  min-width: 110px;
+  max-width: 160px;
+}
+
+.hflow-node strong {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  margin-bottom: 0.1rem;
+}
+
+.hflow-node span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+
+.hflow-node--source   { border-color: var(--ink-2); background: rgba(102, 123, 141, 0.05); }
+.hflow-node--worker   { border-color: var(--brand); background: rgba(15, 94, 168, 0.05); }
+.hflow-node--db       { border-color: #336791; background: rgba(51, 103, 145, 0.05); }
+.hflow-node--api      { border-color: var(--brand); background: rgba(15, 94, 168, 0.05); }
+.hflow-node--frontend { border-color: var(--brand-strong); background: rgba(11, 76, 135, 0.05); }
+.hflow-node--ml       { border-color: var(--brand); background: rgba(15, 94, 168, 0.05); }
+.hflow-node--data     { border-color: var(--brand); background: rgba(15, 94, 168, 0.05); }
+.hflow-node--publish  { border-color: var(--ink-2); background: rgba(102, 123, 141, 0.05); }
+
+.hflow-arrow {
+  flex-shrink: 0;
+  width: 36px;
+  height: 2px;
+  background: var(--ink-2);
+  position: relative;
+}
+
+.hflow-arrow::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--ink-2);
+}
+
+.hflow-connector {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.hflow-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.arch-section {
+  margin-top: 1.4rem;
+}
+
+.arch-section-title {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+}
+
+.arch-section-subtitle {
+  margin: 0.35rem 0 0.9rem;
+  color: var(--ink-1);
+  line-height: 1.55;
 }
 
 .architecture-stack-grid {
-  margin-top: 1rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
@@ -750,21 +852,145 @@ input {
 }
 
 .stack-card h3 {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.2rem;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1rem;
 }
 
-.stack-card ul {
-  margin: 0;
-  padding-left: 1.05rem;
-  color: var(--ink-1);
-  display: grid;
-  gap: 0.32rem;
+.stack-card-tech {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  color: var(--ink-2);
 }
 
-.stack-card li {
-  line-height: 1.35;
+.stack-card p {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ---- ML Pipeline Steps ---- */
+
+.ml-pipeline-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ml-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.ml-step-num {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ml-step strong {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  margin-bottom: 0.15rem;
+}
+
+.ml-step p {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+/* ---- API Table ---- */
+
+.api-table-wrap {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.api-table th {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-soft);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.api-table td {
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-1);
+  line-height: 1.4;
+}
+
+.api-table code {
+  font-size: 0.82rem;
+  background: var(--bg-soft);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.api-table--compact th,
+.api-table--compact td {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.ablation-group-header td {
+  background: var(--bg-soft);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--ink-1);
+  padding: 0.5rem 0.55rem;
+  white-space: normal;
+}
+
+.arch-subsection-title {
+  margin: 1.4rem 0 0.2rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+}
+
+.ablation-best {
+  background: rgba(15, 94, 168, 0.06);
+}
+
+.delta-positive {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.arch-section-footnote {
+  margin: 0.6rem 0 0;
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  line-height: 1.5;
 }
 
 /* ---- ABSA Showcase (HomePage) ---- */
@@ -775,8 +1001,7 @@ input {
   grid-template-columns: 1fr 1fr;
   gap: 1.6rem;
   padding: 1.8rem 2rem;
-  background:
-    linear-gradient(155deg, rgba(15, 94, 168, 0.06), rgba(15, 157, 118, 0.04) 60%, rgba(255, 255, 255, 0.95));
+  background: var(--bg-page);
 }
 
 .absa-showcase-title {

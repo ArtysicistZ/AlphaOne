@@ -56,9 +56,9 @@ function PlaygroundPage() {
       <div className="page-wrap">
         <section className="playground-hero panel">
           <p className="hero-tag">Interactive Demo</p>
-          <h1 className="playground-title">ABSA Model Playground</h1>
+          <h1 className="playground-title">DeBERTa-ABSA-v2 Playground</h1>
           <p className="playground-subtitle">
-            Test our fine-tuned DeBERTa-v3 model in real time. Enter any sentence and the
+            Test our fine-tuned DeBERTa-ABSA-v2 model in real time. Enter any sentence and the
             target words you want to analyze. The model uses entity replacement to classify
             sentiment toward each target independently.
           </p>
