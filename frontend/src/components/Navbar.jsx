@@ -22,6 +22,9 @@ function Navbar() {
           <NavLink to="/architecture" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             Architecture
           </NavLink>
+          <NavLink to="/playground" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
+            Playground
+          </NavLink>
         </div>
       </nav>
     </header>

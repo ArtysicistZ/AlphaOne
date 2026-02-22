@@ -34,7 +34,7 @@ services:
     working_dir: /app
     environment:
       - PYTHONPATH=/app
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     depends_on:
@@ -43,4 +43,14 @@ services:
       - ./.env
     restart: unless-stopped
 
-  
+  inference-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["sh", "-c", "pip install protobuf sentencepiece && uvicorn app.inference_api:app --host 0.0.0.0 --port 8001"]
+    expose:
+      - "8001"
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - ./.env

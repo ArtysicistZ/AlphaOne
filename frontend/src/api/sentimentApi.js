@@ -26,3 +26,8 @@ export const getWordCloudData = async () => {
   const response = await apiClient.get('/signals/social-sentiment/wordcloud');
   return response.data; // Returns [{ text: "word", value: 10 }, ...]
 };
+
+export const runInference = async (text, targets) => {
+  const response = await apiClient.post('/inference', { text, targets });
+  return response.data;
+};

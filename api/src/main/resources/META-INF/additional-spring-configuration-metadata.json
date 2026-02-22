@@ -1,0 +1,10 @@
+{
+  "properties": [
+    {
+      "name": "inference.api.base-url",
+      "type": "java.lang.String",
+      "description": "Base URL of the Python FastAPI inference service.",
+      "defaultValue": "http://localhost:8001"
+    }
+  ]
+}

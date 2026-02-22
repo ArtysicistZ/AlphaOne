@@ -8,8 +8,9 @@ function HomePage() {
       description: 'Collect high-volume social posts continuously and normalize them into a clean analytics stream.',
     },
     {
-      title: 'NLP Sentiment Scoring',
-      description: 'Score each relevant sentence and classify mood shifts for tracked assets and macro topics.',
+      title: 'Subject-Aware NLP',
+      description:
+        'Score sentiment per stock using a fine-tuned DeBERTa-v3 ABSA model with entity replacement — one sentence, multiple verdicts.',
     },
     {
       title: 'Actionable Visuals',
@@ -34,8 +35,8 @@ function HomePage() {
               <Link to="/dashboard" className="btn-primary">
                 Open Live Dashboard
               </Link>
-              <Link to="/architecture" className="btn-secondary">
-                Explore Architecture
+              <Link to="/playground" className="btn-secondary">
+                Try the Model
               </Link>
             </div>
           </div>
@@ -49,6 +50,10 @@ function HomePage() {
               </li>
               <li className="capability-item">
                 <span className="capability-dot" />
+                <span>Classify sentiment <strong>per stock</strong> in multi-ticker sentences.</span>
+              </li>
+              <li className="capability-item">
+                <span className="capability-dot" />
                 <span>Show sentence-level evidence so model outputs stay explainable.</span>
               </li>
               <li className="capability-item">
@@ -56,6 +61,52 @@ function HomePage() {
                 <span>Reveal dominant keyword themes driving market narratives.</span>
               </li>
             </ul>
+          </div>
+        </section>
+
+        <section className="absa-showcase panel">
+          <div className="absa-showcase-text">
+            <p className="hero-tag">Core Innovation</p>
+            <h2 className="absa-showcase-title">Subject-Aware Sentiment Analysis</h2>
+            <p className="absa-showcase-copy">
+              Standard models produce one label per sentence. But when someone writes
+              &ldquo;AAPL is great but TSLA is doomed&rdquo;, the sentiment is different for each
+              stock. Our fine-tuned{' '}
+              <a
+                href="https://huggingface.co/ArtysicistZ/absa-deberta"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absa-link"
+              >
+                DeBERTa-v3 ABSA model
+              </a>{' '}
+              solves this using <strong>entity replacement</strong> &mdash; classifying sentiment
+              toward each stock independently.
+            </p>
+            <Link to="/playground" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+              Try It Yourself
+            </Link>
+          </div>
+
+          <div className="absa-demo">
+            <div className="absa-demo-card">
+              <div className="absa-demo-label">Same sentence, two analyses:</div>
+              <div className="absa-demo-example">
+                <code className="absa-demo-input">&ldquo;AAPL is great but TSLA is doomed&rdquo;</code>
+              </div>
+              <div className="absa-demo-row">
+                <span className="absa-demo-target">target: AAPL</span>
+                <span className="absa-demo-arrow">&rarr;</span>
+                <code className="absa-demo-replaced">[TARGET] is great but [OTHER] is doomed</code>
+                <span className="evidence-badge is-positive">BULLISH</span>
+              </div>
+              <div className="absa-demo-row">
+                <span className="absa-demo-target">target: TSLA</span>
+                <span className="absa-demo-arrow">&rarr;</span>
+                <code className="absa-demo-replaced">[OTHER] is great but [TARGET] is doomed</code>
+                <span className="evidence-badge is-negative">BEARISH</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -70,16 +121,16 @@ function HomePage() {
 
         <section className="metric-strip panel">
           <div className="metric-block">
-            <span className="metric-value">4</span>
-            <span className="metric-label">Live analytics endpoints</span>
+            <span className="metric-value">DeBERTa-v3</span>
+            <span className="metric-label">Fine-tuned ABSA model</span>
           </div>
           <div className="metric-block">
-            <span className="metric-value">Sentence-level</span>
-            <span className="metric-label">Evidence granularity</span>
+            <span className="metric-value">Per-subject</span>
+            <span className="metric-label">Sentiment granularity</span>
           </div>
           <div className="metric-block">
-            <span className="metric-value">Near real-time</span>
-            <span className="metric-label">Refreshable signal feed</span>
+            <span className="metric-value">79.4%</span>
+            <span className="metric-label">Accuracy (3-class)</span>
           </div>
         </section>
       </div>
