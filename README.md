@@ -64,7 +64,7 @@ Standard sentiment models like [FinBERT](https://huggingface.co/ProsusAI/finbert
 
 ### Our Approach: Entity Replacement
 
-We fine-tuned [DeBERTa-v3-base](https://huggingface.co/microsoft/deberta-v3-base) (86M params) to classify sentiment toward a **specific stock** in a multi-stock sentence. The key technique is **entity replacement** (inspired by the [SEntFiN](https://arxiv.org/abs/2305.12257) methodology):
+We fine-tuned [DeBERTa-v3-base](https://huggingface.co/microsoft/deberta-v3-base) (184M params) to classify sentiment toward a **specific stock** in a multi-stock sentence. The key technique is **entity replacement** (inspired by the [SEntFiN](https://arxiv.org/abs/2305.12257) methodology):
 
 ```
 Input:    "AAPL is great but TSLA is doomed"  +  target: AAPL
