@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/photos/welcome-hero.png" alt="AlphaOne Dashboard" width="800" />
+  <img src="docs/photos/welcome_hero.png" alt="AlphaOne Dashboard" width="800" />
 </p>
 
 ## What Is AlphaOne?
@@ -49,7 +49,7 @@ The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contain
 ```
 
 <p align="center">
-  <img src="docs/photos/architecture-overview.png" alt="Platform Architecture" width="800" />
+  <img src="docs/photos/architecture_overview.png" alt="Platform Architecture" width="800" />
 </p>
 
 **Six services** run together via Docker Compose:
@@ -91,7 +91,7 @@ Output:       bearish (for TSLA)
 We use plain vocabulary words (`target`/`other`) instead of special tokens (`[TARGET]`/`[OTHER]`). Special tokens are randomly initialized and collapse to near-identical embeddings (cosine similarity 0.999), while plain words carry pre-trained semantics from the 125B+ token pre-training corpus.
 
 <p align="center">
-  <img src="docs/photos/playground-demo.png" alt="Playground with Attention Heatmap" width="800" />
+  <img src="docs/photos/playground_demo.png" alt="Playground with Attention Heatmap" width="800" />
   <br />
   <em>Interactive playground — real-time inference with attention heatmap visualization</em>
 </p>

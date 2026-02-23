@@ -207,7 +207,7 @@ const ArchitecturePage = () => {
               <div className="hflow-arrow" />
               <div className="hflow-node hflow-node--publish" id="hf-node">
                 <strong>HuggingFace</strong>
-                <span>deberta-absa-v2</span>
+                <span>DeBERTa-ABSA-v2</span>
               </div>
             </div>
 
