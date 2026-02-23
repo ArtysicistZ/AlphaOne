@@ -22,6 +22,18 @@ AlphaOne monitors Reddit communities (r/wallstreetbets, r/stocks, r/investing, e
 
 The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contains **two different sentiments** for two different stocks. Off-the-shelf sentiment models produce a single label for the entire sentence. AlphaOne solves this with **Aspect-Based Sentiment Analysis (ABSA)** using a fine-tuned [DeBERTa-v3](https://huggingface.co/ArtysicistZ/absa-deberta) model that classifies sentiment **per stock** within the same sentence.
 
+<p align="center">
+  <img src="docs/photos/dashboard.png" alt="Market Signal Dashboard" width="800" />
+  <br />
+  <em>Operations dashboard tracking 88 assets with macro sentiment trend</em>
+</p>
+
+<p align="center">
+  <img src="docs/photos/sentiment_sample.png" alt="Sentiment Command Center" width="800" />
+  <br />
+  <em>Per-ticker sentiment analytics with trend chart and sentence-level evidence feed</em>
+</p>
+
 ## How It Works
 
 ```text
@@ -93,7 +105,7 @@ We use plain vocabulary words (`target`/`other`) instead of special tokens (`[TA
 <p align="center">
   <img src="docs/photos/playground_demo.png" alt="Playground with Attention Heatmap" width="800" />
   <br />
-  <em>Interactive playground — real-time inference with attention heatmap visualization</em>
+  <em>Interactive playground with real-time inference and attention heatmap visualization</em>
 </p>
 
 **Training data:** 6,287 hand-audited (sentence, stock, label) triples from Reddit posts, synthetic multi-target pairs, and error-targeted synthetic pairs reverse-engineered from model error analysis.

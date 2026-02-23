@@ -88,3 +88,4 @@ docs/*
 !docs/photos/
 !docs/FINBERT_FINETUNING_DESIGN.md
 backend/ml/models/*
+backend/scripts/*
