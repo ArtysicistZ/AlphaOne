@@ -75,3 +75,55 @@ def get_sentiment_batch(texts: list[str]) -> list[tuple[float, str]]:
         score = float(probs[0] - probs[1])
         results.append((score, label))
     return results
+
+
+def get_sentiment_batch_with_attention(
+    texts: list[str],
+) -> list[tuple[float, str, list[list[float]], list[str]]]:
+    """Batch inference with last-layer attention extraction.
+
+    Returns list of (score, label, attention_matrix, tokens).
+      attention_matrix: (real_len x real_len) head-averaged from last layer.
+      tokens: subword token strings for axis labels.
+    """
+    if not texts:
+        return []
+
+    tokenizer, model = _get_model()
+    inputs = tokenizer(
+        texts, return_tensors="pt", truncation=True,
+        max_length=_MAX_LENGTH, padding=True,
+    )
+    with torch.no_grad():
+        outputs = model(**inputs, output_attentions=True)
+
+    logits = outputs.logits.detach().cpu().numpy()
+    probabilities = np.exp(logits) / np.exp(logits).sum(axis=1, keepdims=True)
+
+    # Last layer attention: (N, 12_heads, seq, seq) → avg heads → (N, seq, seq)
+    last_layer_attn = outputs.attentions[-1].mean(dim=1).detach().cpu().numpy()
+    attention_mask = inputs["attention_mask"].numpy()
+    input_ids = inputs["input_ids"].numpy()
+
+    results = []
+    for i, probs in enumerate(probabilities):
+        pred_idx = int(np.argmax(probs))
+        label = model.config.id2label[pred_idx]
+        score = float(probs[0] - probs[1])
+
+        # Trim to actual (non-padding) tokens
+        real_len = int(attention_mask[i].sum())
+        trimmed = last_layer_attn[i, :real_len, :real_len]
+
+        # Row-normalize after trimming padding columns
+        row_sums = trimmed.sum(axis=1, keepdims=True)
+        row_sums = np.where(row_sums == 0, 1.0, row_sums)
+        normalized = (trimmed / row_sums).tolist()
+
+        # Decode token strings for axis labels
+        token_ids = input_ids[i, :real_len].tolist()
+        tokens = [tokenizer.convert_ids_to_tokens(tid) for tid in token_ids]
+
+        results.append((score, label, normalized, tokens))
+
+    return results

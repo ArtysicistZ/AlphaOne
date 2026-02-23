@@ -12,10 +12,13 @@
   Real-time stock sentiment tracker powered by Reddit and a fine-tuned DeBERTa-v3 ABSA model, achieving <b>82.5% accuracy</b> on 3-class entity-level sentiment from <b>informal social media text</b>.
 </p>
 
+<p align="center">
+  <img src="docs/photos/welcome-hero.png" alt="AlphaOne Dashboard" width="800" />
+</p>
 
 ## What Is AlphaOne?
 
-AlphaOne monitors Reddit communities (r/wallstreetbets, r/stocks, r/investing, etc.) and analyzes what people are saying about individual stocks. For each stock mention, it determines whether the sentiment is **bullish**, **bearish**, or **neutral**, and surfaces this through a web dashboard with charts, evidence feeds, and word clouds.
+AlphaOne monitors Reddit communities (r/wallstreetbets, r/stocks, r/investing, etc.) and analyzes what people are saying about individual stocks. For each stock mention, it determines whether the sentiment is **bullish**, **bearish**, or **neutral**, and surfaces this through a web dashboard with trend charts and sentence-level evidence feeds.
 
 The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contains **two different sentiments** for two different stocks. Off-the-shelf sentiment models produce a single label for the entire sentence. AlphaOne solves this with **Aspect-Based Sentiment Analysis (ABSA)** using a fine-tuned [DeBERTa-v3](https://huggingface.co/ArtysicistZ/absa-deberta) model that classifies sentiment **per stock** within the same sentence.
 
@@ -45,13 +48,18 @@ The core challenge: a sentence like *"AAPL is great but TSLA is doomed"* contain
   React Dashboard
 ```
 
-**Five services** run together via Docker Compose:
+<p align="center">
+  <img src="docs/photos/architecture-overview.png" alt="Platform Architecture" width="800" />
+</p>
+
+**Six services** run together via Docker Compose:
 
 | Service | Role |
 |---------|------|
 | `reddit-worker` | Python Celery worker + beat scheduler; ingests Reddit posts and runs NLP |
+| `inference-api` | FastAPI server for real-time playground inference with attention extraction |
 | `api` | Java/Spring Boot, serves processed data to the frontend |
-| `frontend` | React + Vite, dashboard UI with charts, evidence feeds, word cloud |
+| `frontend` | React + Vite, dashboard UI with charts, evidence feeds, interactive playground |
 | `redis` | Message broker for Celery task queue |
 | `postgresql` | External managed database (e.g., Neon), not containerized |
 
@@ -81,6 +89,12 @@ Output:       bearish (for TSLA)
 ```
 
 We use plain vocabulary words (`target`/`other`) instead of special tokens (`[TARGET]`/`[OTHER]`). Special tokens are randomly initialized and collapse to near-identical embeddings (cosine similarity 0.999), while plain words carry pre-trained semantics from the 125B+ token pre-training corpus.
+
+<p align="center">
+  <img src="docs/photos/playground-demo.png" alt="Playground with Attention Heatmap" width="800" />
+  <br />
+  <em>Interactive playground — real-time inference with attention heatmap visualization</em>
+</p>
 
 **Training data:** 6,287 hand-audited (sentence, stock, label) triples from Reddit posts, synthetic multi-target pairs, and error-targeted synthetic pairs reverse-engineered from model error analysis.
 
@@ -113,7 +127,7 @@ Our 0.823 on Reddit text <b>(sarcasm, slang, implicit sentiment)</b> is within 3
 | **API** | Java 21, Spring Boot 3.5, Spring Data JPA, Spring Actuator |
 | **Worker** | Python 3.11, Celery 5, Redis, SQLAlchemy, PRAW, spaCy, psycopg2 |
 | **ML** | PyTorch, Hugging Face Transformers, PEFT (LoRA), scikit-learn |
-| **Frontend** | React 18, React Router, Axios, Chart.js, react-d3-cloud, Vite |
+| **Frontend** | React 18, React Router, Axios, Chart.js, Vite |
 | **Database** | PostgreSQL |
 | **Deployment** | Docker + Docker Compose |
 
@@ -224,7 +238,6 @@ Base URL: `http://127.0.0.1:8080`
 | `GET /api/v1/signals/social-sentiment/{ticker}/evidence` | Sentence-level evidence for a ticker |
 | `GET /api/v1/signals/social-sentiment/{ticker}/daily` | Daily sentiment aggregation |
 | `GET /api/v1/signals/social-sentiment/summary/{topicSlug}` | Summary stats for a topic |
-| `GET /api/v1/signals/social-sentiment/wordcloud` | Word frequency data for word cloud |
 | `GET /actuator/health` | Service health check |
 
 ## Operations Notes

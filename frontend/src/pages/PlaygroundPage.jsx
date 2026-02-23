@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { runInference } from '../api/sentimentApi';
+import AttentionHeatmap from '../components/AttentionHeatmap';
 
 const EXAMPLES = [
   { text: 'AAPL is great but TSLA is doomed', targets: 'AAPL, TSLA' },
@@ -19,6 +20,7 @@ function PlaygroundPage() {
   const [text, setText] = useState('');
   const [targets, setTargets] = useState('');
   const [results, setResults] = useState(null);
+  const [selectedHeatmapTarget, setSelectedHeatmapTarget] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +38,9 @@ function PlaygroundPage() {
     try {
       const data = await runInference(text.trim(), targetList);
       setResults(data.results);
+      if (data.results?.length > 0) {
+        setSelectedHeatmapTarget(data.results[0].target);
+      }
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(detail || 'Inference request failed. Make sure the backend is running.');
@@ -48,8 +53,12 @@ function PlaygroundPage() {
     setText(ex.text);
     setTargets(ex.targets);
     setResults(null);
+    setSelectedHeatmapTarget('');
     setError('');
   };
+
+  const hasAttention = results?.some((r) => r.attention);
+  const selectedAttention = results?.find((r) => r.target === selectedHeatmapTarget)?.attention;
 
   return (
     <div className="playground-page">
@@ -146,6 +155,38 @@ function PlaygroundPage() {
                 </article>
               ))}
             </div>
+          </section>
+        )}
+
+        {hasAttention && (
+          <section className="heatmap-section panel">
+            <div className="heatmap-controls">
+              <div>
+                <h2 className="heatmap-heading">Attention Heatmap</h2>
+                <p className="heatmap-subtext">
+                  Last encoder layer, averaged across 12 attention heads. Shows what tokens the model
+                  focuses on when classifying sentiment for the selected target.
+                </p>
+              </div>
+              <select
+                className="heatmap-select"
+                value={selectedHeatmapTarget}
+                onChange={(e) => setSelectedHeatmapTarget(e.target.value)}
+              >
+                {results.filter((r) => r.attention).map((r) => (
+                  <option key={r.target} value={r.target}>
+                    {r.target}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedAttention && (
+              <AttentionHeatmap
+                tokens={selectedAttention.tokens}
+                matrix={selectedAttention.matrix}
+              />
+            )}
           </section>
         )}
       </div>

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import logging
 
-from app.processing.nlp_processor import get_sentiment_batch, _get_model
+from app.processing.nlp_processor import get_sentiment_batch, get_sentiment_batch_with_attention, _get_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,12 +51,18 @@ class InferenceRequest(BaseModel):
     targets: list[str] = Field(..., min_length=1)
 
 
+class AttentionData(BaseModel):
+    tokens: list[str]
+    matrix: list[list[float]]
+
+
 class SentimentResult(BaseModel):
     sentence: str
     normalizedInput: str
     target: str
     sentiment: str
     score: float
+    attention: AttentionData | None = None
 
 
 class InferenceResponse(BaseModel):
@@ -75,16 +81,29 @@ def run_inference(req: InferenceRequest):
 
     # For each target, build the replaced text
     replaced_texts = [_replace_targets(sentence, t, targets) for t in targets]
-    predictions = get_sentiment_batch(replaced_texts)
+
+    try:
+        predictions = get_sentiment_batch_with_attention(replaced_texts)
+    except Exception:
+        logger.exception("attention_extraction_failed; falling back to scores only")
+        base_preds = get_sentiment_batch(replaced_texts)
+        predictions = [(score, label, None, None) for score, label in base_preds]
 
     results = []
-    for target, replaced, (score, label) in zip(targets, replaced_texts, predictions):
+    for target, replaced, (score, label, attn_matrix, tokens) in zip(
+        targets, replaced_texts, predictions
+    ):
+        attention_data = None
+        if attn_matrix is not None and tokens is not None:
+            attention_data = AttentionData(tokens=tokens, matrix=attn_matrix)
+
         results.append(SentimentResult(
             sentence=sentence,
             normalizedInput=replaced,
             target=target,
             sentiment=label,
             score=round(score, 4),
+            attention=attention_data,
         ))
 
     return InferenceResponse(results=results)

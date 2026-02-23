@@ -18,18 +18,12 @@ def run_pipeline_once(
         len(subreddits),
         fetch_limit,
     )
-    if not subreddits:
-        logger.warning("pipeline_run_no_subreddits")
+    if not subreddits or fetch_limit <= 0:
+        logger.warning("pipeline_run_no_subreddits or invalid_limits subreddits=%s fetch_limit=%s", len(subreddits) if subreddits else 0, fetch_limit)
         return {
             "ingest": {"fetched": 0, "touched": 0},
             "process": {"claimed": 0, "processed": 0, "failed": 0, "skipped": 0},
         }
-    if fetch_limit <= 0:
-        logger.error(
-            "pipeline_run_invalid_limits fetch_limit=%s",
-            fetch_limit,
-        )
-        raise ValueError("fetch_limit must be > 0")
 
     try:
         init_db()

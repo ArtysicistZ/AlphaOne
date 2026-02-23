@@ -1288,6 +1288,65 @@ input {
   word-break: break-word;
 }
 
+/* ---- Attention Heatmap ---- */
+
+.heatmap-section {
+  margin-top: 1.5rem;
+  padding: 1.2rem 1.4rem;
+}
+
+.heatmap-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.heatmap-heading {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink-0);
+}
+
+.heatmap-subtext {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+.heatmap-select {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--ink-0);
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  transition: border-color 0.18s ease;
+}
+
+.heatmap-select:hover,
+.heatmap-select:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 0.5rem;
+  display: inline-block;
+  max-width: 100%;
+}
+
 @media (max-width: 1080px) {
   .welcome-hero {
     grid-template-columns: 1fr;

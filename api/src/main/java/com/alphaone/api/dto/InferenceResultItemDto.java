@@ -5,5 +5,6 @@ public record InferenceResultItemDto(
     String normalizedInput,
     String target,
     String sentiment,
-    double score
+    double score,
+    AttentionDataDto attention
 ) {}

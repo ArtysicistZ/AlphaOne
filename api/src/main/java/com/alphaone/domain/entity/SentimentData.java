@@ -20,7 +20,7 @@ public class SentimentData {
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
-    @Column(name = "source_id", unique = true)
+    @Column(name = "source_id", unique = true, columnDefinition = "TEXT")
     private String sourceId;
 
     @Column(name = "source_type")
@@ -32,7 +32,7 @@ public class SentimentData {
     @Column(name = "sentiment_score")
     private Double sentimentScore;
 
-    @Column(name = "relevant_text")
+    @Column(name = "relevant_text", columnDefinition = "TEXT")
     private String relevantText;
 
     @ManyToMany
